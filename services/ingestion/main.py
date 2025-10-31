@@ -230,19 +230,24 @@ class PolymarketWebSocketClient:
                 side=side
             ).inc()
 
-            # Create trade event for Kafka
+            # Create trade event for Kafka with full tracking details
             trade_event = {
                 "event_type": "whale_trade",
                 "trade_id": trade_id,
                 "trader_address": trader_address,
                 "market_id": market_id,
                 "token_id": token_id,
-                "side": side,
+                "side": side,  # "BUY" or "SELL"
+                "action": "buy" if side == "BUY" else "sell",  # Explicit action for execution
                 "size": float(size),
                 "price": float(price),
                 "amount": float(amount),
                 "timestamp": timestamp,
-                "detected_at": datetime.utcnow().isoformat()
+                "detected_at": datetime.utcnow().isoformat(),
+                # Trade tracking metadata
+                "copyable": True,  # Indicates we can copy this trade
+                "should_copy": True,  # Execution service should mirror this
+                "mirror_action": side.lower(),  # "buy" or "sell" - what we should do
             }
 
             # Publish to Kafka
@@ -252,7 +257,12 @@ class PolymarketWebSocketClient:
                 key=trader_address.encode('utf-8')
             )
 
-            print(f"🐋 Whale trade: {trader_address[:8]}... {side} {size}@{price} (${amount:.2f})")
+            # Use different emoji for BUY vs SELL
+            action_emoji = "📈" if side == "BUY" else "📉"
+            action_color = "green" if side == "BUY" else "red"
+
+            print(f"{action_emoji} Whale {side}: {trader_address[:8]}... "
+                  f"{size:.0f} shares @ ${price:.3f} = ${amount:.2f} [WILL COPY {side}]")
 
         except Exception as e:
             print(f"Error handling whale trade: {e}")
