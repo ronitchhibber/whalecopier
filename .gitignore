@@ -1,0 +1,151 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Logs
+logs/
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Docker
+docker-compose.override.yml
+
+# Secrets (CRITICAL - NEVER COMMIT)
+secrets/
+credentials/
+*.pem
+*.key
+*.priv
+private_keys/
+*_PRIVATE_KEY*
+*PRIVATE_KEY*
+wallet*.json
+*api_key*
+*API_KEY*
+*secret*
+*SECRET*
+config/production.yaml
+config/prod.yaml
+.aws/
+aws-credentials.json
+
+# Trading Data (NEVER COMMIT)
+trading_data/
+positions/
+orders/
+trades/
+pnl/
+performance/
+backtests/
+results/
+*.pkl
+*.joblib
+
+# Data
+data/
+*.csv
+*.parquet
+*.feather
+historical_data/
+
+# Backups
+*.bak
+*.backup
+*~
+
+# Kafka & Message Queues
+kafka_data/
+zookeeper_data/
+
+# Redis
+dump.rdb
+
+# Monitoring
+prometheus_data/
+grafana_data/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# ML Models
+models/
+*.h5
+*.pt
+*.pth
+checkpoint/
+
+# Certificates
+*.crt
+*.cer
+*.der
+*.p12
+*.pfx
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Database persistence
+pgdata/
+postgres_data/
