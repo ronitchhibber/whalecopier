@@ -1,0 +1,82 @@
+{
+  "enabled_at": "2025-10-31T22:16:50.171075",
+  "total_whales": 46,
+  "auto_copy_enabled": 46,
+  "tier_breakdown": {
+    "MEGA": 8,
+    "LARGE": 38,
+    "MEDIUM": 0
+  },
+  "top_10": [
+    {
+      "address": "0xb1d9476e5a5ba938b57cf0a5dc7a91a114605ee1",
+      "pseudonym": "PringlesMax",
+      "tier": "MEDIUM",
+      "score": 75.0,
+      "pnl": 296613.01
+    },
+    {
+      "address": "0x2635b7fb040d817f4c7e7f45fdd116bf476d5408",
+      "pseudonym": "LuckyCharmLuckyCharm",
+      "tier": "MEDIUM",
+      "score": 75.0,
+      "pnl": 301150.7
+    },
+    {
+      "address": "0x91583ceb1ebec79951a068e1d7d02c1ea590fa7b",
+      "pseudonym": "HugoPrivola",
+      "tier": "MEDIUM",
+      "score": 65.0,
+      "pnl": 20826.93
+    },
+    {
+      "address": "0x43351dd7e8def5f29e5bd5954c8381c848a2fc2f",
+      "pseudonym": "potko",
+      "tier": "MEDIUM",
+      "score": 65.0,
+      "pnl": 28643.51
+    },
+    {
+      "address": "0x25640913e643D420fD24C8a9DE77094A72F971d4",
+      "pseudonym": "Whale_25640913",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    },
+    {
+      "address": "0xc10E59dECd3a7f3c75F4F36079D952Cc85Ec46D1",
+      "pseudonym": "Whale_c10E59dE",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    },
+    {
+      "address": "0xcdF50115d57c184dA78b70dc646e64F859eE330b",
+      "pseudonym": "Whale_cdF50115",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    },
+    {
+      "address": "0x89B03Fd4108091e6A0970296490C59cFD3C038B8",
+      "pseudonym": "Whale_89B03Fd4",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    },
+    {
+      "address": "0x9006A2bDe88d57A3a588B950aCc491E14f10862f",
+      "pseudonym": "Whale_9006A2bD",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    },
+    {
+      "address": "0x041b005181C5375bf9687465F28899C98D1ab0db",
+      "pseudonym": "Whale_041b0051",
+      "tier": "MEDIUM",
+      "score": 50.0,
+      "pnl": 0
+    }
+  ]
+}
