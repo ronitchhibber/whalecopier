@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🐋 Whale Tracker Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e27;
+            color: #e4e4e7;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            padding: 1.5rem;
+            background: #1a1e3a;
+        }
+
+        .stat-card {
+            background: #252a4a;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+
+        .tabs {
+            display: flex;
+            background: #1a1e3a;
+            padding: 0 1.5rem;
+            gap: 0.5rem;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            font-size: 1rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            color: #e4e4e7;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .content {
+            padding: 2rem 1.5rem;
+        }
+
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #252a4a;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        th {
+            background: #1a1e3a;
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #1a1e3a;
+        }
+
+        tr:hover {
+            background: #2d3250;
+        }
+
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-mega {
+            background: #7c3aed;
+            color: white;
+        }
+
+        .badge-high {
+            background: #2563eb;
+            color: white;
+        }
+
+        .badge-medium {
+            background: #059669;
+            color: white;
+        }
+
+        .badge-buy {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge-sell {
+            background: #ef4444;
+            color: white;
+        }
+
+        .link {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .positive {
+            color: #10b981;
+        }
+
+        .negative {
+            color: #ef4444;
+        }
+
+        .paper-trading-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #252a4a;
+            border-radius: 8px;
+        }
+
+        .balance-display {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #252a4a;
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: #9ca3af;
+        }
+
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: #e4e4e7;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 3px solid #252a4a;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🐋 Whale Tracker Dashboard</h1>
+        <p>Real-time monitoring and paper trading for Polymarket whales</p>
+        <span class="live-indicator">
+            <span class="live-dot"></span>
+            LIVE
+        </span>
+    </div>
+
+    <div class="stats-bar">
+        <div class="stat-card">
+            <div class="stat-value" id="total-whales">--</div>
+            <div class="stat-label">Active Whales</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="trades-24h">--</div>
+            <div class="stat-label">Trades (24h)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="volume-24h">$--</div>
+            <div class="stat-label">Volume (24h)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="paper-balance">$10,000</div>
+            <div class="stat-label">Paper Balance</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="paper-pnl">$0</div>
+            <div class="stat-label">Paper P&L</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('whales')">Whales</button>
+        <button class="tab" onclick="switchTab('trades')">Live Trades</button>
+        <button class="tab" onclick="switchTab('paper')">Paper Trading</button>
+        <button class="tab" onclick="switchTab('methodology')">Methodology</button>
+        <button class="tab" onclick="switchTab('settings')">Settings</button>
+    </div>
+
+    <div class="content">
+        <!-- Whales Tab -->
+        <div id="whales-panel" class="tab-panel active">
+            <div class="loading" id="whales-loading">
+                <div class="spinner"></div>
+                <p>Loading whales...</p>
+            </div>
+            <table id="whales-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Whale</th>
+                        <th>Tier</th>
+                        <th>Quality Score</th>
+                        <th>Win Rate</th>
+                        <th>Sharpe</th>
+                        <th>Total Volume</th>
+                        <th>Total P&L</th>
+                        <th>Trades</th>
+                        <th>Profile</th>
+                    </tr>
+                </thead>
+                <tbody id="whales-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- Trades Tab -->
+        <div id="trades-panel" class="tab-panel">
+            <div class="loading" id="trades-loading">
+                <div class="spinner"></div>
+                <p>Loading trades...</p>
+            </div>
+            <table id="trades-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Whale</th>
+                        <th>Market ID</th>
+                        <th>Side</th>
+                        <th>Size</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Copied</th>
+                    </tr>
+                </thead>
+                <tbody id="trades-tbody"></tbody>
+            </table>
+        </div>
+
+        <!-- Paper Trading Tab -->
+        <div id="paper-panel" class="tab-panel">
+            <div class="paper-trading-header">
+                <div>
+                    <div class="stat-label">Current Balance</div>
+                    <div class="balance-display" id="paper-balance-large">$10,000.00</div>
+                </div>
+                <div>
+                    <div class="stat-label">Total P&L</div>
+                    <div class="balance-display" id="paper-pnl-large">$0.00</div>
+                </div>
+                <div>
+                    <div class="stat-label">Win Rate</div>
+                    <div class="balance-display" id="paper-winrate">0%</div>
+                </div>
+                <div>
+                    <div class="stat-label">ROI</div>
+                    <div class="balance-display" id="paper-roi">0%</div>
+                </div>
+            </div>
+
+            <div class="loading" id="paper-loading">
+                <div class="spinner"></div>
+                <p>Loading paper trades...</p>
+            </div>
+            <table id="paper-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Whale</th>
+                        <th>Market</th>
+                        <th>Side</th>
+                        <th>Size</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Quality Score</th>
+                        <th>Sizing Factor</th>
+                        <th>P&L</th>
+                    </tr>
+                </thead>
+                <tbody id="paper-tbody"></tbody>
+            </table>
+            <div id="paper-empty" class="empty-state" style="display: none;">
+                <h3>No paper trades yet</h3>
+                <p>Paper trades will appear here automatically when whales make trades</p>
+            </div>
+        </div>
+
+        <!-- Methodology Tab -->
+        <div id="methodology-panel" class="tab-panel">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <h2 style="margin-bottom: 2rem; color: #667eea;">System Methodology</h2>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">📊 Whale Selection</h3>
+                    <p style="margin-bottom: 1rem;">Whales are ranked using a multi-factor quality score combining:</p>
+                    <ul style="margin-left: 2rem; line-height: 2;">
+                        <li><strong>Win Rate (30%):</strong> Percentage of profitable months (target: >60%)</li>
+                        <li><strong>Sharpe Ratio (40%):</strong> Risk-adjusted returns (target: >1.5)</li>
+                        <li><strong>Consistency (20%):</strong> Stable performance over time</li>
+                        <li><strong>Volume (10%):</strong> Total trading activity</li>
+                    </ul>
+                    <p style="margin-top: 1rem; color: #9ca3af;">
+                        Scores are normalized using MAD-based z-scores with James-Stein shrinkage to reduce estimation error.
+                    </p>
+                </div>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">💰 Position Sizing</h3>
+                    <p style="margin-bottom: 1rem;">Paper trades use dynamic sizing based on:</p>
+                    <pre style="background: #1a1e3a; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.875rem;">
+Position Size = Base % × Quality Factor × Trade Size Ratio × Available Balance
+
+Where:
+• Base % = 5% (configurable)
+• Quality Factor = Whale Quality Score / 100
+• Trade Size Ratio = min(Trade Size / Whale Avg, 2.0)
+• Max Position = 10% of balance</pre>
+                    <p style="margin-top: 1rem; color: #9ca3af;">
+                        This ensures larger positions for high-quality whales making unusually large trades relative to their history.
+                    </p>
+                </div>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">⚡ Real-Time Execution</h3>
+                    <p style="margin-bottom: 1rem;">The system monitors whale trades via:</p>
+                    <ol style="margin-left: 2rem; line-height: 2;">
+                        <li><strong>WebSocket Subscription:</strong> Direct connection to Polymarket CLOB for sub-100ms latency</li>
+                        <li><strong>Trade Detection:</strong> Filters for monitored whale addresses</li>
+                        <li><strong>Quality Check:</strong> Verifies whale still meets minimum criteria</li>
+                        <li><strong>Position Calculation:</strong> Dynamic sizing based on whale quality and trade characteristics</li>
+                        <li><strong>Execution:</strong> Immediately mirrors the trade (paper or live)</li>
+                    </ol>
+                </div>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">🛡️ Risk Management</h3>
+                    <p style="margin-bottom: 1rem;">Multi-layered risk controls:</p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tr>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Stop-Loss</strong></td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">15% per position</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Take-Profit</strong></td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">30% per position</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Max Daily Loss</strong></td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">$500 (circuit breaker)</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Max Position</strong></td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">10% of balance</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem;"><strong>Min Quality Score</strong></td>
+                            <td style="padding: 0.5rem;">50/100 to copy</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">📈 Target Performance</h3>
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="padding: 0.5rem;"><strong>Sharpe Ratio</strong></td>
+                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 2.0</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem;"><strong>Annual ROI</strong></td>
+                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 20%</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem;"><strong>Win Rate</strong></td>
+                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 58%</td>
+                        </tr>
+                        <tr>
+                            <td style="padding: 0.5rem;"><strong>Max Drawdown</strong></td>
+                            <td style="padding: 0.5rem; text-align: right; color: #ef4444;">&lt; 20%</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settings-panel" class="tab-panel">
+            <div style="max-width: 900px; margin: 0 auto;">
+                <h2 style="margin-bottom: 2rem; color: #667eea;">Trading Settings</h2>
+
+                <form id="settings-form">
+                    <!-- Paper Trading Settings -->
+                    <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">💰 Paper Trading</h3>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Initial Balance ($)</label>
+                            <input type="number" id="initial_balance" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="10000">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Base Position Size (%)</label>
+                            <input type="number" step="0.1" id="base_position_size_pct" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="5.0">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Max Position Size (%)</label>
+                            <input type="number" step="0.1" id="max_position_size_pct" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="10.0">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Kelly Fraction</label>
+                            <input type="number" step="0.05" id="kelly_fraction" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="0.25">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Min Quality Score to Copy</label>
+                            <input type="number" step="1" id="min_quality_score" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="50">
+                        </div>
+                    </div>
+
+                    <!-- Whale Filters -->
+                    <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">🐋 Whale Filters</h3>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Min Win Rate (%)</label>
+                            <input type="number" step="1" id="min_win_rate" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="55">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Min Sharpe Ratio</label>
+                            <input type="number" step="0.1" id="min_sharpe" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="1.0">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Min Total Volume ($)</label>
+                            <input type="number" step="1000" id="min_total_volume" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="50000">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: flex; align-items: center; gap: 0.5rem; color: #9ca3af;">
+                                <input type="checkbox" id="copy_only_mega_high" style="width: 20px; height: 20px;">
+                                Copy Only MEGA/HIGH Tier Whales
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Risk Management -->
+                    <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">🛡️ Risk Management</h3>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Stop-Loss (%)</label>
+                            <input type="number" step="1" id="stop_loss_pct" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="15">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Take-Profit (%)</label>
+                            <input type="number" step="1" id="take_profit_pct" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="30">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Max Daily Loss ($)</label>
+                            <input type="number" step="10" id="max_daily_loss" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="500">
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Circuit Breaker Loss (%)</label>
+                            <input type="number" step="1" id="circuit_breaker_loss_pct" style="width: 100%; padding: 0.75rem; background: #1a1e3a; border: 1px solid #667eea; border-radius: 4px; color: #e4e4e7;" value="5">
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div style="display: flex; gap: 1rem;">
+                        <button type="submit" style="flex: 1; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            Save Settings
+                        </button>
+                        <button type="button" onclick="resetSettings()" style="padding: 1rem 2rem; background: #252a4a; border: 1px solid #667eea; border-radius: 8px; color: #667eea; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            Reset to Defaults
+                        </button>
+                    </div>
+                </form>
+
+                <div id="settings-message" style="margin-top: 1rem; padding: 1rem; border-radius: 8px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Update panels
+            document.querySelectorAll('.tab-panel').forEach(panel => {
+                panel.classList.remove('active');
+            });
+            document.getElementById(`${tabName}-panel`).classList.add('active');
+
+            // Load data for the tab
+            if (tabName === 'whales') {
+                loadWhales();
+            } else if (tabName === 'trades') {
+                loadTrades();
+            } else if (tabName === 'paper') {
+                loadPaperTrades();
+            } else if (tabName === 'settings') {
+                loadSettings();
+            }
+            // methodology tab is static, no loading needed
+        }
+
+        // Format currency
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        // Format percentage
+        function formatPercent(value) {
+            return `${value.toFixed(1)}%`;
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return '--';
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+
+        // Format time ago
+        function timeAgo(dateString) {
+            if (!dateString) return '--';
+            const date = new Date(dateString);
+            const seconds = Math.floor((new Date() - date) / 1000);
+
+            if (seconds < 60) return `${seconds}s ago`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return `${Math.floor(seconds / 86400)}d ago`;
+        }
+
+        // Load summary stats
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats/summary');
+                const data = await response.json();
+
+                document.getElementById('total-whales').textContent = data.total_whales;
+                document.getElementById('trades-24h').textContent = data.trades_24h;
+                document.getElementById('volume-24h').textContent = formatCurrency(data.volume_24h);
+                document.getElementById('paper-balance').textContent = formatCurrency(data.paper_balance);
+                document.getElementById('paper-pnl').textContent = formatCurrency(data.paper_pnl);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load whales
+        async function loadWhales() {
+            try {
+                const response = await fetch('/api/whales');
+                const whales = await response.json();
+
+                const tbody = document.getElementById('whales-tbody');
+                tbody.innerHTML = '';
+
+                if (whales.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #9ca3af;">No whales found. Run scripts/seed_whales.py to add whales.</td></tr>';
+                } else {
+                    whales.forEach(whale => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${whale.pseudonym || 'Unknown'}</strong><br><small style="color: #9ca3af;">${whale.address.substring(0, 10)}...</small></td>
+                            <td><span class="badge badge-${whale.tier.toLowerCase()}">${whale.tier}</span></td>
+                            <td><strong>${whale.quality_score.toFixed(1)}</strong></td>
+                            <td><span class="positive">${formatPercent(whale.win_rate)}</span></td>
+                            <td>${whale.sharpe_ratio.toFixed(2)}</td>
+                            <td>${formatCurrency(whale.total_volume)}</td>
+                            <td class="${whale.total_pnl >= 0 ? 'positive' : 'negative'}">${formatCurrency(whale.total_pnl)}</td>
+                            <td>${whale.total_trades}</td>
+                            <td><a href="${whale.profile_url}" target="_blank" class="link">View Profile</a></td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                document.getElementById('whales-loading').style.display = 'none';
+                document.getElementById('whales-table').style.display = 'table';
+            } catch (error) {
+                console.error('Error loading whales:', error);
+            }
+        }
+
+        // Load trades
+        async function loadTrades() {
+            try {
+                const response = await fetch('/api/trades?limit=100');
+                const trades = await response.json();
+
+                const tbody = document.getElementById('trades-tbody');
+                tbody.innerHTML = '';
+
+                if (trades.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #9ca3af;">No trades yet. Trades will appear here when whales make them.</td></tr>';
+                } else {
+                    trades.forEach(trade => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${timeAgo(trade.timestamp)}</td>
+                            <td>${trade.trader_address.substring(0, 10)}...</td>
+                            <td><small>${trade.market_id ? trade.market_id.substring(0, 20) + '...' : '--'}</small></td>
+                            <td><span class="badge badge-${trade.side.toLowerCase()}">${trade.side}</span></td>
+                            <td>${trade.size.toFixed(0)}</td>
+                            <td>$${trade.price.toFixed(3)}</td>
+                            <td>${formatCurrency(trade.amount)}</td>
+                            <td>${trade.followed ? '✅' : '⏳'}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                }
+
+                document.getElementById('trades-loading').style.display = 'none';
+                document.getElementById('trades-table').style.display = 'table';
+            } catch (error) {
+                console.error('Error loading trades:', error);
+            }
+        }
+
+        // Load paper trades
+        async function loadPaperTrades() {
+            try {
+                const [portfolioResponse, performanceResponse] = await Promise.all([
+                    fetch('/api/paper-trading/portfolio'),
+                    fetch('/api/paper-trading/performance')
+                ]);
+
+                const portfolio = await portfolioResponse.json();
+                const performance = await performanceResponse.json();
+
+                // Update header stats
+                document.getElementById('paper-balance-large').textContent = formatCurrency(portfolio.balance);
+                document.getElementById('paper-pnl-large').textContent = formatCurrency(performance.total_pnl);
+                document.getElementById('paper-winrate').textContent = formatPercent(performance.win_rate);
+                document.getElementById('paper-roi').textContent = formatPercent(performance.roi);
+
+                // Update color based on P&L
+                const pnlElement = document.getElementById('paper-pnl-large');
+                pnlElement.className = `balance-display ${performance.total_pnl >= 0 ? 'positive' : 'negative'}`;
+
+                const tbody = document.getElementById('paper-tbody');
+                tbody.innerHTML = '';
+
+                if (portfolio.trades.length === 0) {
+                    document.getElementById('paper-loading').style.display = 'none';
+                    document.getElementById('paper-empty').style.display = 'block';
+                    document.getElementById('paper-table').style.display = 'none';
+                } else {
+                    portfolio.trades.forEach(trade => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${formatDate(trade.timestamp)}</td>
+                            <td><strong>${trade.whale_name}</strong><br><small>${trade.whale_address.substring(0, 10)}...</small></td>
+                            <td><small>${trade.market_id ? trade.market_id.substring(0, 15) + '...' : '--'}</small></td>
+                            <td><span class="badge badge-${trade.side.toLowerCase()}">${trade.side}</span></td>
+                            <td>${trade.size.toFixed(2)}</td>
+                            <td>$${trade.price.toFixed(3)}</td>
+                            <td>${formatCurrency(trade.amount)}</td>
+                            <td>${trade.quality_score.toFixed(1)}</td>
+                            <td>${(trade.sizing_factor * 100).toFixed(1)}%</td>
+                            <td class="${trade.pnl >= 0 ? 'positive' : 'negative'}">${formatCurrency(trade.pnl)}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById('paper-loading').style.display = 'none';
+                    document.getElementById('paper-empty').style.display = 'none';
+                    document.getElementById('paper-table').style.display = 'table';
+                }
+            } catch (error) {
+                console.error('Error loading paper trades:', error);
+            }
+        }
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('WebSocket message:', data);
+
+                // Handle different message types
+                if (data.type === 'new_trade') {
+                    // Refresh trades if on trades tab
+                    if (document.getElementById('trades-panel').classList.contains('active')) {
+                        loadTrades();
+                    }
+                    loadStats();
+                } else if (data.type === 'paper_trade_executed') {
+                    // Refresh paper trading if on paper tab
+                    if (document.getElementById('paper-panel').classList.contains('active')) {
+                        loadPaperTrades();
+                    }
+                    loadStats();
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed. Reconnecting in 5s...');
+                setTimeout(connectWebSocket, 5000);
+            };
+        }
+
+        // Load settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+
+                // Populate form
+                document.getElementById('initial_balance').value = settings.paper_trading.initial_balance;
+                document.getElementById('base_position_size_pct').value = settings.paper_trading.base_position_size_pct;
+                document.getElementById('max_position_size_pct').value = settings.paper_trading.max_position_size_pct;
+                document.getElementById('kelly_fraction').value = settings.paper_trading.kelly_fraction;
+                document.getElementById('min_quality_score').value = settings.paper_trading.min_quality_score;
+
+                document.getElementById('min_win_rate').value = settings.whale_filters.min_win_rate;
+                document.getElementById('min_sharpe').value = settings.whale_filters.min_sharpe;
+                document.getElementById('min_total_volume').value = settings.whale_filters.min_total_volume;
+                document.getElementById('copy_only_mega_high').checked = settings.whale_filters.copy_only_mega_high;
+
+                document.getElementById('stop_loss_pct').value = settings.risk_management.stop_loss_pct;
+                document.getElementById('take_profit_pct').value = settings.risk_management.take_profit_pct;
+                document.getElementById('max_daily_loss').value = settings.risk_management.max_daily_loss;
+                document.getElementById('circuit_breaker_loss_pct').value = settings.risk_management.circuit_breaker_loss_pct;
+            } catch (error) {
+                console.error('Error loading settings:', error);
+            }
+        }
+
+        // Save settings
+        async function saveSettings(event) {
+            event.preventDefault();
+
+            const newSettings = {
+                paper_trading: {
+                    initial_balance: parseFloat(document.getElementById('initial_balance').value),
+                    base_position_size_pct: parseFloat(document.getElementById('base_position_size_pct').value),
+                    max_position_size_pct: parseFloat(document.getElementById('max_position_size_pct').value),
+                    kelly_fraction: parseFloat(document.getElementById('kelly_fraction').value),
+                    min_quality_score: parseFloat(document.getElementById('min_quality_score').value),
+                },
+                whale_filters: {
+                    min_win_rate: parseFloat(document.getElementById('min_win_rate').value),
+                    min_sharpe: parseFloat(document.getElementById('min_sharpe').value),
+                    min_total_volume: parseFloat(document.getElementById('min_total_volume').value),
+                    copy_only_mega_high: document.getElementById('copy_only_mega_high').checked,
+                },
+                risk_management: {
+                    stop_loss_pct: parseFloat(document.getElementById('stop_loss_pct').value),
+                    take_profit_pct: parseFloat(document.getElementById('take_profit_pct').value),
+                    max_daily_loss: parseFloat(document.getElementById('max_daily_loss').value),
+                    circuit_breaker_loss_pct: parseFloat(document.getElementById('circuit_breaker_loss_pct').value),
+                }
+            };
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(newSettings)
+                });
+
+                const result = await response.json();
+
+                const messageEl = document.getElementById('settings-message');
+                if (result.success) {
+                    messageEl.style.display = 'block';
+                    messageEl.style.background = '#10b981';
+                    messageEl.textContent = '✅ Settings saved successfully! Paper trading has been reset.';
+                    await loadStats();
+                    await loadPaperTrades();
+                } else {
+                    messageEl.style.display = 'block';
+                    messageEl.style.background = '#ef4444';
+                    messageEl.textContent = '❌ Failed to save settings';
+                }
+
+                setTimeout(() => {
+                    messageEl.style.display = 'none';
+                }, 3000);
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                const messageEl = document.getElementById('settings-message');
+                messageEl.style.display = 'block';
+                messageEl.style.background = '#ef4444';
+                messageEl.textContent = '❌ Error: ' + error.message;
+            }
+        }
+
+        // Reset settings
+        async function resetSettings() {
+            if (!confirm('Are you sure you want to reset all settings to defaults? This will also reset your paper trading balance.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/settings/reset', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    await loadSettings();
+                    await loadStats();
+                    await loadPaperTrades();
+
+                    const messageEl = document.getElementById('settings-message');
+                    messageEl.style.display = 'block';
+                    messageEl.style.background = '#10b981';
+                    messageEl.textContent = '✅ Settings reset to defaults!';
+
+                    setTimeout(() => {
+                        messageEl.style.display = 'none';
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error('Error resetting settings:', error);
+            }
+        }
+
+        // Initialize dashboard
+        async function init() {
+            await loadStats();
+            await loadWhales();
+            connectWebSocket();
+
+            // Attach settings form handler
+            document.getElementById('settings-form').addEventListener('submit', saveSettings);
+
+            // Refresh stats every 10 seconds
+            setInterval(loadStats, 10000);
+
+            // Refresh trades every 5 seconds if on trades tab
+            setInterval(() => {
+                if (document.getElementById('trades-panel').classList.contains('active')) {
+                    loadTrades();
+                }
+            }, 5000);
+
+            // Refresh paper trading every 5 seconds if on paper tab
+            setInterval(() => {
+                if (document.getElementById('paper-panel').classList.contains('active')) {
+                    loadPaperTrades();
+                }
+            }, 5000);
+        }
+
+        // Start when page loads
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -764,7 +764,7 @@ class Event(Base):
     # Event details
     title = Column(String(200), nullable=False)
     description = Column(Text)
-    metadata = Column(JSONB, default={})
+    event_metadata = Column(JSONB, default={})
 
     # Related entities
     whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'))

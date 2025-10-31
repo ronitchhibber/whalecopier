@@ -24,7 +24,7 @@ from sqlalchemy.orm import sessionmaker
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from libs.common.models import Base, Whale, WalletCluster, Platform
+from libs.common.models import Base, Whale, WalletCluster, Platform, Sector
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -61,7 +61,7 @@ FAMOUS_WHALES = [
         "cluster_name": "Théo French Whale",
         "is_famous": True,
         "estimated_pnl": 26000000,
-        "primary_category": "politics",
+        "primary_category": Sector.POLITICS,
         "win_rate": 65.0,
         "total_volume": 67668524,  # $67.6M traded
         "is_confirmed": True  # Address confirmed and API-accessible
@@ -78,7 +78,7 @@ FAMOUS_WHALES = [
         "cluster_name": None,
         "is_famous": True,
         "estimated_pnl": 522206,
-        "primary_category": "mixed",
+        "primary_category": Sector.OTHER,
         "win_rate": 60.0,  # Conservative estimate
         "total_volume": 9154868,  # $9.2M
         "is_confirmed": True
