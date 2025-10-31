@@ -50,6 +50,9 @@ ASYNC_DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+asyncpg:/
 # ============================================================================
 
 FAMOUS_WHALES = [
+    # ========================================================================
+    # TIER 1: MEGA WHALES ($1M+ profit) - CONFIRMED ADDRESSES
+    # ========================================================================
     {
         "address": "0x1f2dd6d473f3e824cd2f8a89d9c69fb96f6ad0cf",  # Fredi9999 (CONFIRMED)
         "pseudonym": "Fredi9999",
@@ -62,6 +65,23 @@ FAMOUS_WHALES = [
         "win_rate": 65.0,
         "total_volume": 67668524,  # $67.6M traded
         "is_confirmed": True  # Address confirmed and API-accessible
+    },
+
+    # ========================================================================
+    # TIER 2: HIGH WHALES ($500k+ profit) - CONFIRMED ADDRESSES
+    # ========================================================================
+    {
+        "address": "0xf705fa045201391d9632b7f3cde06a5e24453ca7",  # Leaderboard #15 (CONFIRMED)
+        "pseudonym": "Leaderboard_#15",
+        "tier": "HIGH",
+        "notes": "Leaderboard position #15. Consistent high-volume trader with $522k profit.",
+        "cluster_name": None,
+        "is_famous": True,
+        "estimated_pnl": 522206,
+        "primary_category": "mixed",
+        "win_rate": 60.0,  # Conservative estimate
+        "total_volume": 9154868,  # $9.2M
+        "is_confirmed": True
     },
     # NOTE: The following whales are part of the same Théo cluster but addresses
     # are not publicly disclosed. To activate them, replace placeholder addresses
