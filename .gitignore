@@ -149,3 +149,4 @@ dmypy.json
 # Database persistence
 pgdata/
 postgres_data/
+.env.polymarket

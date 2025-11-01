@@ -1,5 +1,6 @@
 """
 Copy Trading Engine - Main orchestrator for monitoring and copying whale trades.
+Uses position tracking via Gamma API to detect whale activity.
 """
 
 import asyncio
@@ -12,6 +13,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from libs.common.models import Whale, Trade, Order, Market
+from copy_trading.tracker import WhalePositionTracker
 
 # Configure logging
 logging.basicConfig(
@@ -31,6 +33,7 @@ class CopyTradingEngine:
         self.config = self.load_config(config_path)
         self.running = False
         self.last_check = {}  # Track last check time per whale
+        self.tracker = WhalePositionTracker()  # Position tracker for monitoring
 
         # Database setup
         from dotenv import load_dotenv
@@ -69,11 +72,12 @@ class CopyTradingEngine:
         logger.info("✅ Engine started - Monitoring for whale trades...")
         logger.info("=" * 80)
 
-        # Main monitoring loop
+        # Main monitoring loop - Check every 5 minutes
         try:
             while self.running:
                 await self.monitor_cycle()
-                await asyncio.sleep(30)  # Check every 30 seconds
+                logger.info("⏱️  Next check in 5 minutes...")
+                await asyncio.sleep(300)  # Check every 5 minutes (300 seconds)
         except KeyboardInterrupt:
             logger.info("\n⏸️  Stopping engine...")
             self.running = False
@@ -82,7 +86,7 @@ class CopyTradingEngine:
             raise
 
     async def monitor_cycle(self):
-        """Execute one monitoring cycle - check for new whale trades."""
+        """Execute one monitoring cycle - check whales for position changes."""
         session = self.Session()
 
         try:
@@ -91,26 +95,32 @@ class CopyTradingEngine:
                 Whale.is_copying_enabled == True
             ).order_by(Whale.quality_score.desc()).all()
 
-            new_trades_found = 0
+            logger.info(f"🔍 Checking {len(whales)} whales for activity...")
+
+            activity_detected = 0
 
             for whale in whales:
-                # Check for new trades
-                new_trades = await self.check_whale_for_new_trades(whale, session)
+                # Monitor whale for position changes
+                changes = self.tracker.monitor_whale(whale.address)
 
-                if new_trades:
-                    new_trades_found += len(new_trades)
+                if changes:
+                    activity_detected += 1
 
-                    for trade in new_trades:
-                        # Evaluate if we should copy this trade
-                        should_copy, reason = self.should_copy_trade(trade, whale, session)
+                    for change in changes:
+                        # Log activity
+                        logger.info(f"📈 Activity detected:")
+                        logger.info(f"   Whale: {whale.pseudonym or whale.address[:10]}")
+                        logger.info(f"   New trades: +{change['new_trades']}")
+                        logger.info(f"   Volume change: ${change['volume_change']:,.0f}")
+                        logger.info(f"   PnL change: ${change['pnl_change']:,.0f}")
 
-                        if should_copy:
-                            await self.execute_copy_trade(trade, whale, session)
-                        else:
-                            logger.debug(f"⏭️  Skipped trade {trade.trade_id[:8]}... - {reason}")
+                        # You can add logic here to trigger copy trades based on activity
+                        # For now, just log the detection
 
-            if new_trades_found > 0:
-                logger.info(f"📊 Found {new_trades_found} new whale trades this cycle")
+            if activity_detected > 0:
+                logger.info(f"✅ Detected activity from {activity_detected} whales")
+            else:
+                logger.info(f"💤 No new activity detected from {len(whales)} whales")
 
         except Exception as e:
             logger.error(f"Error in monitor cycle: {e}")

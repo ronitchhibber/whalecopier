@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🐋 Whale Tracker Dashboard</title>
+    <title>Whale Tracker Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -22,15 +22,116 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             padding: 2rem;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .header h1 {
+        .header-left h1 {
             font-size: 2rem;
             margin-bottom: 0.5rem;
         }
 
-        .header p {
+        .header-left p {
             opacity: 0.9;
+        }
+
+        .header-right {
+            text-align: right;
+        }
+
+        .clock {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .timezone {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .toggle-label {
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #4a5568;
+            transition: .3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #48bb78;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Scrollable Table Container */
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+            border-radius: 8px;
+        }
+
+        .table-container::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: #1a1e3a;
+            border-radius: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
         }
 
         .stats-bar {
@@ -241,45 +342,68 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left {
+            flex: 1;
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            background: #1a1e3a;
+            padding: 0.5rem;
+            border-radius: 8px;
+            width: fit-content;
+        }
+
+        .mode-toggle button {
+            padding: 0.75rem 2rem;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #9ca3af;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .mode-toggle button.active {
+            background: #667eea;
+            color: white;
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🐋 Whale Tracker Dashboard</h1>
-        <p>Real-time monitoring and paper trading for Polymarket whales</p>
-        <span class="live-indicator">
-            <span class="live-dot"></span>
-            LIVE
-        </span>
-    </div>
-
-    <div class="stats-bar">
-        <div class="stat-card">
-            <div class="stat-value" id="total-whales">--</div>
-            <div class="stat-label">Active Whales</div>
+        <div class="header-left">
+            <h1>WhaleTracker</h1>
+            <p>Real-time monitoring and copy trading for Polymarket whales</p>
         </div>
-        <div class="stat-card">
-            <div class="stat-value" id="trades-24h">--</div>
-            <div class="stat-label">Trades (24h)</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="volume-24h">$--</div>
-            <div class="stat-label">Volume (24h)</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="paper-balance">$10,000</div>
-            <div class="stat-label">Paper Balance</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value" id="paper-pnl">$0</div>
-            <div class="stat-label">Paper P&L</div>
+        <div class="header-right">
+            <div class="toggle-container">
+                <span class="toggle-label">Live Trading</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="live-trading-toggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="clock" id="live-clock">--:--:-- PM</div>
+            <div class="timezone">Pacific Time (PST)</div>
         </div>
     </div>
 
     <div class="tabs">
         <button class="tab active" onclick="switchTab('whales')">Whales</button>
         <button class="tab" onclick="switchTab('trades')">Live Trades</button>
-        <button class="tab" onclick="switchTab('paper')">Paper Trading</button>
+        <button class="tab" onclick="switchTab('trading')">Trading</button>
+        <button class="tab" onclick="switchTab('backtest')">Backtest</button>
         <button class="tab" onclick="switchTab('methodology')">Methodology</button>
         <button class="tab" onclick="switchTab('settings')">Settings</button>
     </div>
@@ -287,6 +411,20 @@
     <div class="content">
         <!-- Whales Tab -->
         <div id="whales-panel" class="tab-panel active">
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-value" id="total-whales">--</div>
+                    <div class="stat-label">Active Whales</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="trades-24h">--</div>
+                    <div class="stat-label">Trades (24h)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="volume-24h">$--</div>
+                    <div class="stat-label">Volume (24h)</div>
+                </div>
+            </div>
             <div class="loading" id="whales-loading">
                 <div class="spinner"></div>
                 <p>Loading whales...</p>
@@ -315,49 +453,81 @@
                 <div class="spinner"></div>
                 <p>Loading trades...</p>
             </div>
-            <table id="trades-table" style="display: none;">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Whale</th>
-                        <th>Market ID</th>
-                        <th>Side</th>
-                        <th>Size</th>
-                        <th>Price</th>
-                        <th>Amount</th>
-                        <th>Copied</th>
-                    </tr>
-                </thead>
-                <tbody id="trades-tbody"></tbody>
-            </table>
+            <div class="table-container">
+                <table id="trades-table" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Whale</th>
+                            <th>Market ID</th>
+                            <th>Side</th>
+                            <th>Size</th>
+                            <th>Price</th>
+                            <th>Amount</th>
+                            <th>Copied</th>
+                        </tr>
+                    </thead>
+                    <tbody id="trades-tbody"></tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Paper Trading Tab -->
-        <div id="paper-panel" class="tab-panel">
+        <!-- Trading Tab -->
+        <div id="trading-panel" class="tab-panel">
+            <div class="mode-toggle">
+                <button class="active" onclick="switchTradingMode('paper')">Paper Trading</button>
+                <button onclick="switchTradingMode('live')">Live Trading</button>
+            </div>
+
             <div class="paper-trading-header">
                 <div>
                     <div class="stat-label">Current Balance</div>
-                    <div class="balance-display" id="paper-balance-large">$10,000.00</div>
+                    <div class="balance-display" id="trading-balance">$10,000.00</div>
                 </div>
                 <div>
                     <div class="stat-label">Total P&L</div>
-                    <div class="balance-display" id="paper-pnl-large">$0.00</div>
+                    <div class="balance-display" id="trading-pnl">$0.00</div>
                 </div>
                 <div>
                     <div class="stat-label">Win Rate</div>
-                    <div class="balance-display" id="paper-winrate">0%</div>
+                    <div class="balance-display" id="trading-winrate">0%</div>
                 </div>
                 <div>
                     <div class="stat-label">ROI</div>
-                    <div class="balance-display" id="paper-roi">0%</div>
+                    <div class="balance-display" id="trading-roi">0%</div>
                 </div>
             </div>
 
-            <div class="loading" id="paper-loading">
+            <!-- Active Bets Section -->
+            <h3 style="margin: 2rem 0 1rem 0; color: #667eea;">Active Bets</h3>
+            <table id="active-bets-table">
+                <thead>
+                    <tr>
+                        <th>Market</th>
+                        <th>Side</th>
+                        <th>Entry Price</th>
+                        <th>Current Price</th>
+                        <th>Size</th>
+                        <th>Amount</th>
+                        <th>Unrealized P&L</th>
+                        <th>ROI</th>
+                        <th>Time Held</th>
+                    </tr>
+                </thead>
+                <tbody id="active-bets-tbody">
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 2rem; color: #9ca3af;">No active bets</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Trade History Section -->
+            <h3 style="margin: 2rem 0 1rem 0; color: #667eea;">Trade History</h3>
+            <div class="loading" id="trading-loading">
                 <div class="spinner"></div>
-                <p>Loading paper trades...</p>
+                <p>Loading trades...</p>
             </div>
-            <table id="paper-table" style="display: none;">
+            <table id="trading-table" style="display: none;">
                 <thead>
                     <tr>
                         <th>Time</th>
@@ -372,11 +542,189 @@
                         <th>P&L</th>
                     </tr>
                 </thead>
-                <tbody id="paper-tbody"></tbody>
+                <tbody id="trading-tbody"></tbody>
             </table>
-            <div id="paper-empty" class="empty-state" style="display: none;">
-                <h3>No paper trades yet</h3>
-                <p>Paper trades will appear here automatically when whales make trades</p>
+            <div id="trading-empty" class="empty-state" style="display: none;">
+                <h3>No trades yet</h3>
+                <p>Trades will appear here automatically when whales make trades</p>
+            </div>
+        </div>
+
+        <!-- Backtest Tab -->
+        <div id="backtest-panel" class="tab-panel">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <h2 style="margin-bottom: 2rem; color: #667eea;">Strategy Backtesting</h2>
+
+                <!-- Backtest Configuration -->
+                <div class="card" style="margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1.5rem;">Backtest Parameters</h3>
+
+                    <form id="backtestForm" onsubmit="runBacktest(event)">
+                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 2rem;">
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Starting Balance ($)</label>
+                                <input type="number" id="bt_balance" value="1000" step="100" min="100" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Max Position Size ($)</label>
+                                <input type="number" id="bt_max_position" value="100" step="10" min="10" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Min Whale Quality</label>
+                                <input type="number" id="bt_min_quality" value="50" min="0" max="100" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Days to Test</label>
+                                <input type="number" id="bt_days_back" value="30" min="1" max="365" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Position Size (%)</label>
+                                <input type="number" id="bt_position_pct" value="5" min="1" max="20" step="1" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+
+                            <div>
+                                <label style="display: block; margin-bottom: 0.5rem; color: #8b9dc3;">Max Daily Loss ($)</label>
+                                <input type="number" id="bt_max_daily_loss" value="500" step="50" min="50" style="width: 100%; padding: 0.75rem; background: #1a1d35; border: 1px solid #2d3352; border-radius: 6px; color: #fff;">
+                            </div>
+                        </div>
+
+                        <button type="submit" style="width: 100%; padding: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">
+                            Run Backtest
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Backtest Results -->
+                <div id="backtestResults" style="display: none;">
+                    <!-- Performance Summary -->
+                    <div class="stats-bar" style="margin-bottom: 2rem;">
+                        <div class="stat-card">
+                            <div class="stat-label">Starting Balance</div>
+                            <div class="stat-value" id="bt_start_balance">$0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Ending Balance</div>
+                            <div class="stat-value" id="bt_end_balance">$0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Total P&L</div>
+                            <div class="stat-value" id="bt_total_pnl">$0</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-label">Win Rate</div>
+                            <div class="stat-value" id="bt_win_rate">0%</div>
+                        </div>
+                    </div>
+
+                    <!-- Disclaimer Box -->
+                    <div style="background: linear-gradient(135deg, #ff6b6b22 0%, #ffd93d22 100%); border: 2px solid #ff6b6b; border-radius: 12px; padding: 1.5rem; margin-bottom: 2rem;">
+                        <div style="display: flex; align-items: start; gap: 1rem;">
+                            <div style="font-size: 2rem; flex-shrink: 0;">⚠️</div>
+                            <div>
+                                <h3 style="color: #ff6b6b; margin: 0 0 0.75rem 0; font-size: 1.1rem;">Backtest Limitations</h3>
+                                <div style="color: #ddd; font-size: 0.9rem; line-height: 1.6;">
+                                    <p style="margin: 0 0 0.5rem 0;"><strong>This backtest uses estimated performance:</strong></p>
+                                    <ul style="margin: 0.5rem 0; padding-left: 1.5rem;">
+                                        <li>Win rates are <strong>discounted 20%</strong> to account for regression to the mean and execution challenges</li>
+                                        <li>Includes 2% trading fees on all positions</li>
+                                        <li>Timestamps are synthetic (spread over 60 days) for visualization purposes</li>
+                                        <li>Does not account for slippage, liquidity constraints, or market impact from copying</li>
+                                        <li>Past performance does not guarantee future results</li>
+                                    </ul>
+                                    <p style="margin: 0.75rem 0 0 0; font-style: italic; color: #ffd93d;">
+                                        Use these results to compare <em>relative</em> strategy performance and test risk parameters, not as a prediction of actual returns.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Metrics -->
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-bottom: 2rem;">
+                        <div class="card">
+                            <h3 style="color: #667eea; margin-bottom: 1rem;">Trade Statistics</h3>
+                            <div style="display: grid; gap: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Total Trades:</span>
+                                    <span style="color: #fff; font-weight: bold;" id="bt_total_trades">0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Winning Trades:</span>
+                                    <span style="color: #10b981; font-weight: bold;" id="bt_winning_trades">0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Losing Trades:</span>
+                                    <span style="color: #ef4444; font-weight: bold;" id="bt_losing_trades">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3 style="color: #667eea; margin-bottom: 1rem;">Risk Metrics</h3>
+                            <div style="display: grid; gap: 0.75rem;">
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Max Drawdown:</span>
+                                    <span style="color: #fff; font-weight: bold;" id="bt_max_drawdown">$0</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Sharpe Ratio:</span>
+                                    <span style="color: #fff; font-weight: bold;" id="bt_sharpe">0.00</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; padding: 0.75rem; background: #1a1d35; border-radius: 6px;">
+                                    <span style="color: #8b9dc3;">Test Period:</span>
+                                    <span style="color: #fff; font-weight: bold;" id="bt_period">0 days</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- All Trades -->
+                    <div class="card">
+                        <h3 style="color: #667eea; margin-bottom: 1rem;">All Backtest Trades</h3>
+                        <div id="bt_all_trades"></div>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="backtestLoading" style="display: none; padding: 3rem;">
+                    <div style="text-align: center; margin-bottom: 2rem;">
+                        <div style="color: #667eea; font-size: 1.2rem; margin-bottom: 0.5rem;">Running Backtest</div>
+                        <div id="backtestProgressText" style="color: #8b9dc3; margin-bottom: 2rem;">Initializing...</div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div style="max-width: 600px; margin: 0 auto;">
+                        <div style="background: #1a1d35; border-radius: 12px; height: 24px; overflow: hidden; border: 1px solid #2d3352;">
+                            <div id="backtestProgressBar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center;">
+                                <span id="backtestProgressPercent" style="color: white; font-size: 0.75rem; font-weight: bold;"></span>
+                            </div>
+                        </div>
+
+                        <!-- Step Details -->
+                        <div style="margin-top: 1.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; font-size: 0.85rem;">
+                            <div id="step1" style="text-align: center; color: #4a5568; transition: color 0.3s;">
+                                <div style="margin-bottom: 0.25rem;">📊</div>
+                                <div>Load Data</div>
+                            </div>
+                            <div id="step2" style="text-align: center; color: #4a5568; transition: color 0.3s;">
+                                <div style="margin-bottom: 0.25rem;">🎯</div>
+                                <div>Filter Trades</div>
+                            </div>
+                            <div id="step3" style="text-align: center; color: #4a5568; transition: color 0.3s;">
+                                <div style="margin-bottom: 0.25rem;">🔬</div>
+                                <div>Calculate P&L</div>
+                            </div>
+                            <div id="step4" style="text-align: center; color: #4a5568; transition: color 0.3s;">
+                                <div style="margin-bottom: 0.25rem;">📈</div>
+                                <div>Generate Results</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -386,22 +734,35 @@
                 <h2 style="margin-bottom: 2rem; color: #667eea;">System Methodology</h2>
 
                 <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="color: #667eea; margin-bottom: 1rem;">📊 Whale Selection</h3>
-                    <p style="margin-bottom: 1rem;">Whales are ranked using a multi-factor quality score combining:</p>
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">Whale Selection</h3>
+                    <p style="margin-bottom: 1rem;">Whales are ranked using a quality score (0-100) combining:</p>
                     <ul style="margin-left: 2rem; line-height: 2;">
-                        <li><strong>Win Rate (30%):</strong> Percentage of profitable months (target: >60%)</li>
-                        <li><strong>Sharpe Ratio (40%):</strong> Risk-adjusted returns (target: >1.5)</li>
-                        <li><strong>Consistency (20%):</strong> Stable performance over time</li>
-                        <li><strong>Volume (10%):</strong> Total trading activity</li>
+                        <li><strong>PnL (30%):</strong> Total profit/loss (target: $1,000+)</li>
+                        <li><strong>ROI (30%):</strong> Return on investment (target: 50%+)</li>
+                        <li><strong>Volume (15%):</strong> Total trading volume</li>
+                        <li><strong>Total Trades (15%):</strong> Number of trades (min: 10)</li>
+                        <li><strong>Markets Traded (10%):</strong> Diversification across markets</li>
                     </ul>
                     <p style="margin-top: 1rem; color: #9ca3af;">
-                        Scores are normalized using MAD-based z-scores with James-Stein shrinkage to reduce estimation error.
+                        Minimum quality score of 30/100 required for copy trading. Whales must have publicly available Polymarket profiles and activity within the last 30 days.
                     </p>
                 </div>
 
                 <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="color: #667eea; margin-bottom: 1rem;">💰 Position Sizing</h3>
-                    <p style="margin-bottom: 1rem;">Paper trades use dynamic sizing based on:</p>
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">Monitoring System</h3>
+                    <p style="margin-bottom: 1rem;">Two-tier monitoring system:</p>
+                    <ul style="margin-left: 2rem; line-height: 2;">
+                        <li><strong>Trade Monitor (every 15 min):</strong> Detects new whale trades in real-time by monitoring profile changes</li>
+                        <li><strong>Metrics Updater (every 6 hours):</strong> Updates comprehensive 24-hour metrics, volume, and activity data</li>
+                    </ul>
+                    <p style="margin-top: 1rem; color: #9ca3af;">
+                        System checks whales 96 times per day for trade activity, ensuring minimal latency in detecting new positions.
+                    </p>
+                </div>
+
+                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">Position Sizing</h3>
+                    <p style="margin-bottom: 1rem;">Dynamic position sizing based on whale quality:</p>
                     <pre style="background: #1a1e3a; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.875rem;">
 Position Size = Base % × Quality Factor × Trade Size Ratio × Available Balance
 
@@ -411,25 +772,12 @@ Where:
 • Trade Size Ratio = min(Trade Size / Whale Avg, 2.0)
 • Max Position = 10% of balance</pre>
                     <p style="margin-top: 1rem; color: #9ca3af;">
-                        This ensures larger positions for high-quality whales making unusually large trades relative to their history.
+                        Higher quality whales get larger position allocations. Unusually large trades (relative to whale's history) receive increased sizing.
                     </p>
                 </div>
 
                 <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="color: #667eea; margin-bottom: 1rem;">⚡ Real-Time Execution</h3>
-                    <p style="margin-bottom: 1rem;">The system monitors whale trades via:</p>
-                    <ol style="margin-left: 2rem; line-height: 2;">
-                        <li><strong>WebSocket Subscription:</strong> Direct connection to Polymarket CLOB for sub-100ms latency</li>
-                        <li><strong>Trade Detection:</strong> Filters for monitored whale addresses</li>
-                        <li><strong>Quality Check:</strong> Verifies whale still meets minimum criteria</li>
-                        <li><strong>Position Calculation:</strong> Dynamic sizing based on whale quality and trade characteristics</li>
-                        <li><strong>Execution:</strong> Immediately mirrors the trade (paper or live)</li>
-                    </ol>
-                </div>
-
-                <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                    <h3 style="color: #667eea; margin-bottom: 1rem;">🛡️ Risk Management</h3>
-                    <p style="margin-bottom: 1rem;">Multi-layered risk controls:</p>
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">Risk Management</h3>
                     <table style="width: 100%; border-collapse: collapse;">
                         <tr>
                             <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Stop-Loss</strong></td>
@@ -444,34 +792,34 @@ Where:
                             <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">$500 (circuit breaker)</td>
                         </tr>
                         <tr>
-                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Max Position</strong></td>
+                            <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;"><strong>Max Position Size</strong></td>
                             <td style="padding: 0.5rem; border-bottom: 1px solid #1a1e3a;">10% of balance</td>
                         </tr>
                         <tr>
                             <td style="padding: 0.5rem;"><strong>Min Quality Score</strong></td>
-                            <td style="padding: 0.5rem;">50/100 to copy</td>
+                            <td style="padding: 0.5rem;">30/100 to enable copying</td>
                         </tr>
                     </table>
                 </div>
 
                 <div style="background: #252a4a; padding: 2rem; border-radius: 8px;">
-                    <h3 style="color: #667eea; margin-bottom: 1rem;">📈 Target Performance</h3>
+                    <h3 style="color: #667eea; margin-bottom: 1rem;">Quality Thresholds</h3>
                     <table style="width: 100%;">
                         <tr>
-                            <td style="padding: 0.5rem;"><strong>Sharpe Ratio</strong></td>
-                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 2.0</td>
+                            <td style="padding: 0.5rem;"><strong>Minimum PnL</strong></td>
+                            <td style="padding: 0.5rem; text-align: right;">$1,000</td>
                         </tr>
                         <tr>
-                            <td style="padding: 0.5rem;"><strong>Annual ROI</strong></td>
-                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 20%</td>
+                            <td style="padding: 0.5rem;"><strong>Minimum Trades</strong></td>
+                            <td style="padding: 0.5rem; text-align: right;">10 trades</td>
                         </tr>
                         <tr>
-                            <td style="padding: 0.5rem;"><strong>Win Rate</strong></td>
-                            <td style="padding: 0.5rem; text-align: right; color: #10b981;">&gt; 58%</td>
+                            <td style="padding: 0.5rem;"><strong>Activity Requirement</strong></td>
+                            <td style="padding: 0.5rem; text-align: right;">Last 30 days</td>
                         </tr>
                         <tr>
-                            <td style="padding: 0.5rem;"><strong>Max Drawdown</strong></td>
-                            <td style="padding: 0.5rem; text-align: right; color: #ef4444;">&lt; 20%</td>
+                            <td style="padding: 0.5rem;"><strong>Profile Availability</strong></td>
+                            <td style="padding: 0.5rem; text-align: right;">Public Polymarket profile required</td>
                         </tr>
                     </table>
                 </div>
@@ -486,7 +834,7 @@ Where:
                 <form id="settings-form">
                     <!-- Paper Trading Settings -->
                     <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">💰 Paper Trading</h3>
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">Paper Trading</h3>
 
                         <div style="margin-bottom: 1.5rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Initial Balance ($)</label>
@@ -516,7 +864,7 @@ Where:
 
                     <!-- Whale Filters -->
                     <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">🐋 Whale Filters</h3>
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">Whale Filters</h3>
 
                         <div style="margin-bottom: 1.5rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Min Win Rate (%)</label>
@@ -543,7 +891,7 @@ Where:
 
                     <!-- Risk Management -->
                     <div style="background: #252a4a; padding: 2rem; border-radius: 8px; margin-bottom: 2rem;">
-                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">🛡️ Risk Management</h3>
+                        <h3 style="color: #667eea; margin-bottom: 1.5rem;">Risk Management</h3>
 
                         <div style="margin-bottom: 1.5rem;">
                             <label style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Stop-Loss (%)</label>
@@ -584,6 +932,52 @@ Where:
 
     <script>
         let ws = null;
+        let currentTradingMode = 'paper'; // 'paper' or 'live'
+
+
+        // Trading mode switching
+        async function switchTradingMode(mode) {
+            try {
+                // Call API to set trading mode
+                const response = await fetch('/api/trading/mode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ mode: mode })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentTradingMode = mode;
+
+                    // Update button states
+                    const buttons = document.querySelectorAll('.mode-toggle button');
+                    buttons.forEach(btn => {
+                        btn.classList.remove('active');
+                        if (btn.textContent.toLowerCase().includes(mode)) {
+                            btn.classList.add('active');
+                        }
+                    });
+
+                    // Show confirmation message
+                    if (mode === 'live') {
+                        alert('LIVE TRADING ENABLED\n\nCAUTION: Real money will be used!\n\nSafety limits:\n- Max $100 per trade\n- $500 daily loss limit\n- Min whale quality: 50');
+                    } else {
+                        alert('Paper trading mode enabled\n\nNo real money will be used.');
+                    }
+
+                    // Reload trading data
+                    loadTradingData();
+                } else {
+                    alert('Failed to change trading mode: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error switching trading mode:', error);
+                alert('Error changing trading mode. Check console for details.');
+            }
+        }
 
         // Tab switching
         function switchTab(tabName) {
@@ -604,12 +998,28 @@ Where:
                 loadWhales();
             } else if (tabName === 'trades') {
                 loadTrades();
-            } else if (tabName === 'paper') {
-                loadPaperTrades();
+            } else if (tabName === 'trading') {
+                loadTradingData();
             } else if (tabName === 'settings') {
                 loadSettings();
             }
             // methodology tab is static, no loading needed
+        }
+
+        // Update clock in PST
+        function updateClock() {
+            const now = new Date();
+            const pstTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
+            const hours = pstTime.getHours();
+            const minutes = pstTime.getMinutes().toString().padStart(2, '0');
+            const seconds = pstTime.getSeconds().toString().padStart(2, '0');
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+
+            const clockElement = document.getElementById('live-clock');
+            if (clockElement) {
+                clockElement.textContent = `${displayHours}:${minutes}:${seconds} ${ampm}`;
+            }
         }
 
         // Format currency
@@ -627,23 +1037,23 @@ Where:
             return `${value.toFixed(1)}%`;
         }
 
-        // Format date
+        // Format date in PST
         function formatDate(dateString) {
             if (!dateString) return '--';
             const date = new Date(dateString);
-            return date.toLocaleString();
+            return date.toLocaleString('en-US', {
+                timeZone: 'America/Los_Angeles',
+                month: 'short',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            }) + ' PST';
         }
 
-        // Format time ago
+        // Format time ago (deprecated - use formatDate instead)
         function timeAgo(dateString) {
-            if (!dateString) return '--';
-            const date = new Date(dateString);
-            const seconds = Math.floor((new Date() - date) / 1000);
-
-            if (seconds < 60) return `${seconds}s ago`;
-            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-            return `${Math.floor(seconds / 86400)}d ago`;
+            return formatDate(dateString);
         }
 
         // Load summary stats
@@ -720,7 +1130,7 @@ Where:
                             <td>${trade.size.toFixed(0)}</td>
                             <td>$${trade.price.toFixed(3)}</td>
                             <td>${formatCurrency(trade.amount)}</td>
-                            <td>${trade.followed ? '✅' : '⏳'}</td>
+                            <td>${trade.followed ? 'YES' : 'PENDING'}</td>
                         `;
                         tbody.appendChild(row);
                     });
@@ -733,8 +1143,8 @@ Where:
             }
         }
 
-        // Load paper trades
-        async function loadPaperTrades() {
+        // Load trading data (paper or live)
+        async function loadTradingData() {
             try {
                 const [portfolioResponse, performanceResponse] = await Promise.all([
                     fetch('/api/paper-trading/portfolio'),
@@ -745,22 +1155,26 @@ Where:
                 const performance = await performanceResponse.json();
 
                 // Update header stats
-                document.getElementById('paper-balance-large').textContent = formatCurrency(portfolio.balance);
-                document.getElementById('paper-pnl-large').textContent = formatCurrency(performance.total_pnl);
-                document.getElementById('paper-winrate').textContent = formatPercent(performance.win_rate);
-                document.getElementById('paper-roi').textContent = formatPercent(performance.roi);
+                document.getElementById('trading-balance').textContent = formatCurrency(portfolio.balance);
+                document.getElementById('trading-pnl').textContent = formatCurrency(performance.total_pnl);
+                document.getElementById('trading-winrate').textContent = formatPercent(performance.win_rate);
+                document.getElementById('trading-roi').textContent = formatPercent(performance.roi);
 
                 // Update color based on P&L
-                const pnlElement = document.getElementById('paper-pnl-large');
+                const pnlElement = document.getElementById('trading-pnl');
                 pnlElement.className = `balance-display ${performance.total_pnl >= 0 ? 'positive' : 'negative'}`;
 
-                const tbody = document.getElementById('paper-tbody');
+                // Load active bets (currently from positions in portfolio)
+                loadActiveBets(portfolio.positions);
+
+                // Load trade history
+                const tbody = document.getElementById('trading-tbody');
                 tbody.innerHTML = '';
 
                 if (portfolio.trades.length === 0) {
-                    document.getElementById('paper-loading').style.display = 'none';
-                    document.getElementById('paper-empty').style.display = 'block';
-                    document.getElementById('paper-table').style.display = 'none';
+                    document.getElementById('trading-loading').style.display = 'none';
+                    document.getElementById('trading-empty').style.display = 'block';
+                    document.getElementById('trading-table').style.display = 'none';
                 } else {
                     portfolio.trades.forEach(trade => {
                         const row = document.createElement('tr');
@@ -779,13 +1193,45 @@ Where:
                         tbody.appendChild(row);
                     });
 
-                    document.getElementById('paper-loading').style.display = 'none';
-                    document.getElementById('paper-empty').style.display = 'none';
-                    document.getElementById('paper-table').style.display = 'table';
+                    document.getElementById('trading-loading').style.display = 'none';
+                    document.getElementById('trading-empty').style.display = 'none';
+                    document.getElementById('trading-table').style.display = 'table';
                 }
             } catch (error) {
-                console.error('Error loading paper trades:', error);
+                console.error('Error loading trading data:', error);
             }
+        }
+
+        // Load active bets
+        function loadActiveBets(positions) {
+            const tbody = document.getElementById('active-bets-tbody');
+            tbody.innerHTML = '';
+
+            if (!positions || Object.keys(positions).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; padding: 2rem; color: #9ca3af;">No active bets</td></tr>';
+                return;
+            }
+
+            Object.entries(positions).forEach(([key, position]) => {
+                const currentPrice = position.price; // TODO: fetch current price
+                const pnl = (currentPrice - position.price) * position.size;
+                const roi = (pnl / position.amount) * 100;
+                const timeHeld = Math.floor((new Date() - new Date(position.timestamp)) / 1000 / 60); // minutes
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><small>${position.market_id ? position.market_id.substring(0, 20) + '...' : '--'}</small></td>
+                    <td><span class="badge badge-${position.side.toLowerCase()}">${position.side}</span></td>
+                    <td>$${position.price.toFixed(3)}</td>
+                    <td>$${currentPrice.toFixed(3)}</td>
+                    <td>${position.size.toFixed(2)}</td>
+                    <td>${formatCurrency(position.amount)}</td>
+                    <td class="${pnl >= 0 ? 'positive' : 'negative'}">${formatCurrency(pnl)}</td>
+                    <td class="${roi >= 0 ? 'positive' : 'negative'}">${roi.toFixed(1)}%</td>
+                    <td>${timeHeld < 60 ? timeHeld + 'm' : Math.floor(timeHeld / 60) + 'h'}</td>
+                `;
+                tbody.appendChild(row);
+            });
         }
 
         // Connect to WebSocket
@@ -811,9 +1257,9 @@ Where:
                     }
                     loadStats();
                 } else if (data.type === 'paper_trade_executed') {
-                    // Refresh paper trading if on paper tab
-                    if (document.getElementById('paper-panel').classList.contains('active')) {
-                        loadPaperTrades();
+                    // Refresh trading if on trading tab
+                    if (document.getElementById('trading-panel').classList.contains('active')) {
+                        loadTradingData();
                     }
                     loadStats();
                 }
@@ -897,13 +1343,13 @@ Where:
                 if (result.success) {
                     messageEl.style.display = 'block';
                     messageEl.style.background = '#10b981';
-                    messageEl.textContent = '✅ Settings saved successfully! Paper trading has been reset.';
+                    messageEl.textContent = 'Settings saved successfully! Paper trading has been reset.';
                     await loadStats();
-                    await loadPaperTrades();
+                    await loadTradingData();
                 } else {
                     messageEl.style.display = 'block';
                     messageEl.style.background = '#ef4444';
-                    messageEl.textContent = '❌ Failed to save settings';
+                    messageEl.textContent = 'Failed to save settings';
                 }
 
                 setTimeout(() => {
@@ -914,7 +1360,7 @@ Where:
                 const messageEl = document.getElementById('settings-message');
                 messageEl.style.display = 'block';
                 messageEl.style.background = '#ef4444';
-                messageEl.textContent = '❌ Error: ' + error.message;
+                messageEl.textContent = 'Error: ' + error.message;
             }
         }
 
@@ -934,12 +1380,12 @@ Where:
                 if (result.success) {
                     await loadSettings();
                     await loadStats();
-                    await loadPaperTrades();
+                    await loadTradingData();
 
                     const messageEl = document.getElementById('settings-message');
                     messageEl.style.display = 'block';
                     messageEl.style.background = '#10b981';
-                    messageEl.textContent = '✅ Settings reset to defaults!';
+                    messageEl.textContent = 'Settings reset to defaults!';
 
                     setTimeout(() => {
                         messageEl.style.display = 'none';
@@ -950,11 +1396,219 @@ Where:
             }
         }
 
+        // Progress Bar Functions
+        function updateProgress(step, percent, message) {
+            // Update progress bar
+            document.getElementById('backtestProgressBar').style.width = percent + '%';
+            document.getElementById('backtestProgressPercent').textContent = percent + '%';
+            document.getElementById('backtestProgressText').textContent = message;
+
+            // Highlight current step
+            for (let i = 1; i <= 4; i++) {
+                const stepEl = document.getElementById('step' + i);
+                if (i < step) {
+                    stepEl.style.color = '#10b981'; // Green for completed
+                } else if (i === step) {
+                    stepEl.style.color = '#667eea'; // Purple for current
+                } else {
+                    stepEl.style.color = '#4a5568'; // Gray for pending
+                }
+            }
+        }
+
+        function resetProgress() {
+            updateProgress(0, 0, 'Initializing...');
+        }
+
+        // Backtesting Functions
+        async function runBacktest(event) {
+            event.preventDefault();
+
+            // Get form values
+            const params = {
+                starting_balance: parseFloat(document.getElementById('bt_balance').value),
+                max_position_usd: parseFloat(document.getElementById('bt_max_position').value),
+                min_whale_quality: parseInt(document.getElementById('bt_min_quality').value),
+                days_back: parseInt(document.getElementById('bt_days_back').value),
+                position_size_pct: parseFloat(document.getElementById('bt_position_pct').value) / 100,
+                max_daily_loss: parseFloat(document.getElementById('bt_max_daily_loss').value)
+            };
+
+            // Show loading, hide results
+            document.getElementById('backtestLoading').style.display = 'block';
+            document.getElementById('backtestResults').style.display = 'none';
+            resetProgress();
+
+            // Simulate progress (since backend doesn't send progress updates yet)
+            updateProgress(1, 10, 'Loading historical whale trades...');
+
+            try {
+                // Small delay to show first step
+                await new Promise(resolve => setTimeout(resolve, 300));
+                updateProgress(1, 25, 'Fetching trade data from database...');
+
+                const response = await fetch('/api/backtest/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
+                });
+
+                // Progress: Filter trades
+                updateProgress(2, 40, 'Filtering trades by quality score...');
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                const result = await response.json();
+
+                // Progress: Calculate P&L
+                updateProgress(3, 65, 'Fetching market outcomes & calculating P&L...');
+                await new Promise(resolve => setTimeout(resolve, 400));
+
+                // Progress: Generate results
+                updateProgress(4, 90, 'Generating performance metrics...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                if (result.success) {
+                    updateProgress(4, 100, 'Complete!');
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                    displayBacktestResults(result.results);
+                } else {
+                    alert('Backtest failed: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error running backtest:', error);
+                alert('Error running backtest: ' + error.message);
+            } finally {
+                document.getElementById('backtestLoading').style.display = 'none';
+            }
+        }
+
+        function displayBacktestResults(results) {
+            const perf = results.performance;
+            const stats = results.statistics;
+            const risk = results.risk_metrics;
+            const period = results.period;
+
+            // Update performance summary
+            document.getElementById('bt_start_balance').textContent = '$' + perf.starting_balance.toFixed(2);
+            document.getElementById('bt_end_balance').textContent = '$' + perf.ending_balance.toFixed(2);
+
+            const pnlValue = perf.total_pnl;
+            const pnlPct = perf.total_pnl_pct;
+            const pnlColor = pnlValue >= 0 ? '#10b981' : '#ef4444';
+            const pnlSign = pnlValue >= 0 ? '+' : '';
+            document.getElementById('bt_total_pnl').innerHTML =
+                `<span style="color: ${pnlColor}">${pnlSign}$${pnlValue.toFixed(2)}</span> ` +
+                `<span style="font-size: 0.9rem; color: ${pnlColor}">(${pnlSign}${pnlPct.toFixed(1)}%)</span>`;
+
+            document.getElementById('bt_win_rate').textContent = stats.win_rate.toFixed(1) + '%';
+
+            // Update trade statistics
+            document.getElementById('bt_total_trades').textContent = stats.total_trades;
+            document.getElementById('bt_winning_trades').textContent = stats.winning_trades;
+            document.getElementById('bt_losing_trades').textContent = stats.losing_trades;
+
+            // Update risk metrics
+            document.getElementById('bt_max_drawdown').textContent =
+                '$' + risk.max_drawdown.toFixed(2) + ' (' + risk.max_drawdown_pct.toFixed(1) + '%)';
+            document.getElementById('bt_sharpe').textContent = risk.sharpe_ratio.toFixed(2);
+            document.getElementById('bt_period').textContent = period.days + ' days';
+
+            // Update all trades table
+            const allTrades = results.all_trades || [];
+
+            let tradesHTML = '<div style="max-height: 600px; overflow-y: auto; overflow-x: auto;"><table style="width: 100%; border-collapse: collapse;">';
+            tradesHTML += '<thead style="position: sticky; top: 0; background: #1a1d35; z-index: 10;"><tr style="background: #1a1d35; color: #8b9dc3;">';
+            tradesHTML += '<th style="padding: 1rem; text-align: left;">Time</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: left;">Whale</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: left;">Market</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: center;">Side</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: right;">Price</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: right;">Size</th>';
+            tradesHTML += '<th style="padding: 1rem; text-align: right;">P&L</th>';
+            tradesHTML += '</tr></thead><tbody>';
+
+            if (allTrades.length === 0) {
+                tradesHTML += '<tr><td colspan="7" style="padding: 2rem; text-align: center; color: #8b9dc3;">No trades executed in backtest</td></tr>';
+            } else {
+                allTrades.forEach((trade) => {
+                    const pnlColor = trade.realized_pnl >= 0 ? '#10b981' : '#ef4444';
+                    const pnlSign = trade.realized_pnl >= 0 ? '+' : '';
+                    const sideColor = trade.side === 'BUY' ? '#10b981' : '#ef4444';
+
+                    const tradeTime = new Date(trade.timestamp);
+                    const timeStr = tradeTime.toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    tradesHTML += '<tr style="border-bottom: 1px solid #2d3352;">';
+                    tradesHTML += `<td style="padding: 0.75rem; color: #8b9dc3; font-size: 0.9rem;">${timeStr}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; color: #fff;">${trade.whale_pseudonym}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; color: #8b9dc3; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${trade.market_title}">${trade.market_title}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; text-align: center; color: ${sideColor}; font-weight: bold;">${trade.side}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; text-align: right; color: #8b9dc3;">$${trade.price.toFixed(2)}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; text-align: right; color: #8b9dc3;">$${trade.position_size.toFixed(2)}</td>`;
+                    tradesHTML += `<td style="padding: 0.75rem; text-align: right; color: ${pnlColor}; font-weight: bold;">${pnlSign}$${Math.abs(trade.realized_pnl).toFixed(2)}</td>`;
+                    tradesHTML += '</tr>';
+                });
+            }
+
+            tradesHTML += '</tbody></table></div>';
+            document.getElementById('bt_all_trades').innerHTML = tradesHTML;
+
+            // Show results
+            document.getElementById('backtestResults').style.display = 'block';
+
+            // Scroll to results
+            document.getElementById('backtestResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Initialize live trading toggle
+        async function initToggle() {
+            const toggle = document.getElementById('live-trading-toggle');
+
+            // Get current trading mode
+            try {
+                const response = await fetch('/api/trading/mode');
+                const data = await response.json();
+                toggle.checked = (data.mode === 'live');
+            } catch (error) {
+                console.error('Error loading trading mode:', error);
+            }
+
+            // Handle toggle changes
+            toggle.addEventListener('change', async () => {
+                const newMode = toggle.checked ? 'live' : 'paper';
+                try {
+                    await fetch('/api/trading/mode', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mode: newMode })
+                    });
+                    console.log(`Trading mode switched to: ${newMode.toUpperCase()}`);
+                } catch (error) {
+                    console.error('Error updating trading mode:', error);
+                    toggle.checked = !toggle.checked; // Revert on error
+                }
+            });
+        }
+
         // Initialize dashboard
         async function init() {
             await loadStats();
             await loadWhales();
             connectWebSocket();
+
+            // Initialize and start clock
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Initialize live trading toggle
+            await initToggle();
 
             // Attach settings form handler
             document.getElementById('settings-form').addEventListener('submit', saveSettings);
@@ -969,10 +1623,10 @@ Where:
                 }
             }, 5000);
 
-            // Refresh paper trading every 5 seconds if on paper tab
+            // Refresh trading every 5 seconds if on trading tab
             setInterval(() => {
-                if (document.getElementById('paper-panel').classList.contains('active')) {
-                    loadPaperTrades();
+                if (document.getElementById('trading-panel').classList.contains('active')) {
+                    loadTradingData();
                 }
             }, 5000);
         }

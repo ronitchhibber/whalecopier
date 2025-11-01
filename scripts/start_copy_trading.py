@@ -8,8 +8,10 @@ import sys
 import os
 import asyncio
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
+# Add project root and src to path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.join(project_root, 'src'))
 
 from copy_trading.engine import CopyTradingEngine
 

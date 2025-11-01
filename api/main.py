@@ -21,8 +21,26 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from libs.common.models import Whale, Trade
 from dotenv import load_dotenv
+import logging
+from decimal import Decimal
+from pydantic import BaseModel
 
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Import backtester
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'services'))
+    from backtester import Backtester, BacktestConfig
+    BACKTESTER_AVAILABLE = True
+    logger.info("Backtester loaded successfully")
+except ImportError as e:
+    logger.warning(f"Backtester not available: {e}")
+    BACKTESTER_AVAILABLE = False
+    Backtester = None
+    BacktestConfig = None
 
 
 # ============================================================================
@@ -31,46 +49,26 @@ load_dotenv()
 
 def fetch_24h_trades(address: str) -> tuple:
     """
-    Fetch trades from last 24h for a whale address.
+    Fetch trades from last 24h for a whale address from database.
     Returns: (trade_count, total_volume)
+
+    NOTE: This now reads from pre-calculated database columns that are
+    updated by the whale_metrics_updater service every 15 minutes.
     """
     try:
-        cutoff = int((datetime.utcnow() - timedelta(hours=24)).timestamp())
+        # Query whale record for 24h metrics
+        session = next(get_db())
+        whale = session.query(Whale).filter(Whale.address == address).first()
 
-        all_trades = []
-        endpoints = [
-            f"https://clob.polymarket.com/trades?maker={address}",
-            f"https://clob.polymarket.com/trades?taker={address}",
-        ]
+        if whale:
+            trades_count = whale.trades_24h or 0
+            volume = float(whale.volume_24h or 0)
+            return trades_count, volume
+        else:
+            return 0, 0.0
 
-        for endpoint in endpoints:
-            try:
-                response = requests.get(
-                    endpoint,
-                    params={'after': cutoff},
-                    timeout=3,
-                    headers={'User-Agent': 'Mozilla/5.0'}
-                )
-
-                if response.status_code == 200:
-                    data = response.json()
-                    if isinstance(data, list):
-                        all_trades.extend(data)
-                    elif isinstance(data, dict) and data.get('data'):
-                        all_trades.extend(data['data'])
-
-            except:
-                continue
-
-        trade_count = len(all_trades)
-        total_volume = sum(
-            float(t.get('size', 0) or 0) * float(t.get('price', 0) or 0)
-            for t in all_trades
-        )
-
-        return trade_count, total_volume
-
-    except:
+    except Exception as e:
+        print(f"Error fetching 24h trades for {address[:10]}: {e}")
         return 0, 0.0
 
 app = FastAPI(title="Whale Tracker Dashboard")
@@ -174,9 +172,6 @@ async def get_whales():
 
         result = []
         for w in whales:
-            # Fetch 24h metrics
-            trades_24h, volume_24h = fetch_24h_trades(w.address)
-
             result.append({
                 "address": w.address,
                 "pseudonym": w.pseudonym,
@@ -190,8 +185,12 @@ async def get_whales():
                 "is_copying_enabled": w.is_copying_enabled,
                 "profile_url": f"https://polymarket.com/profile/{w.address}",
                 "last_active": w.last_active.isoformat() if w.last_active else None,
-                "volume_24h": volume_24h,
-                "trades_24h": trades_24h
+                # 24h metrics (updated by whale_metrics_updater service)
+                "trades_24h": w.trades_24h or 0,
+                "volume_24h": float(w.volume_24h) if w.volume_24h else 0,
+                "active_trades": w.active_trades or 0,
+                "most_recent_trade_at": w.most_recent_trade_at.isoformat() if w.most_recent_trade_at else None,
+                "last_trade_check_at": w.last_trade_check_at.isoformat() if w.last_trade_check_at else None
             })
 
         return result
@@ -209,7 +208,7 @@ async def get_trades(limit: int = 50):
         ).scalars().all()
 
         return [{
-            "id": t.id,
+            "id": t.trade_id,
             "trader_address": t.trader_address,
             "market_id": t.market_id,
             "side": t.side,
@@ -443,6 +442,264 @@ async def reset_settings():
     }
 
     return {"success": True, "settings": trading_settings}
+
+
+# ============================================================================
+# SYSTEM CONTROL ENDPOINTS
+# ============================================================================
+
+# Initialize system manager
+try:
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src', 'services'))
+    from system_manager import system_manager
+    SYSTEM_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"System manager not available: {e}")
+    SYSTEM_AVAILABLE = False
+    system_manager = None
+
+# Initialize live trader
+try:
+    from simple_live_trader import trader as live_trader
+    LIVE_TRADER_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"Live trader not available: {e}")
+    LIVE_TRADER_AVAILABLE = False
+    live_trader = None
+
+
+@app.post("/api/system/start")
+async def start_system():
+    """Start the monitoring system (trade monitor + metrics updater)."""
+    if not SYSTEM_AVAILABLE or not system_manager:
+        return {"success": False, "error": "System manager not available"}
+
+    success = system_manager.start()
+    return {
+        "success": success,
+        "message": "System started successfully" if success else "System already running",
+        "status": system_manager.get_status()
+    }
+
+
+@app.post("/api/system/stop")
+async def stop_system():
+    """Stop the monitoring system."""
+    if not SYSTEM_AVAILABLE or not system_manager:
+        return {"success": False, "error": "System manager not available"}
+
+    success = system_manager.stop()
+    return {
+        "success": success,
+        "message": "System stopped successfully" if success else "System not running",
+        "status": system_manager.get_status()
+    }
+
+
+@app.get("/api/system/status")
+async def get_system_status():
+    """Get current system status."""
+    if not SYSTEM_AVAILABLE or not system_manager:
+        return {
+            "running": False,
+            "available": False,
+            "error": "System manager not available"
+        }
+
+    return system_manager.get_status()
+
+
+# ============================================================================
+# LIVE TRADING CONTROL ENDPOINTS
+# ============================================================================
+
+@app.get("/api/trading/mode")
+async def get_trading_mode():
+    """Get current trading mode (paper or live)."""
+    if not LIVE_TRADER_AVAILABLE or not live_trader:
+        return {
+            "mode": "paper",
+            "available": False,
+            "error": "Live trader not available"
+        }
+
+    status = live_trader.get_status()
+    return {
+        "mode": status['mode'].lower(),
+        "available": True,
+        "status": status
+    }
+
+
+@app.post("/api/trading/mode")
+async def set_trading_mode(request: dict):
+    """
+    Set trading mode to paper or live.
+
+    Body: {"mode": "paper"} or {"mode": "live"}
+    """
+    if not LIVE_TRADER_AVAILABLE or not live_trader:
+        return {
+            "success": False,
+            "error": "Live trader not available"
+        }
+
+    mode = request.get("mode", "paper").lower()
+
+    if mode == "live":
+        live_trader.enable_live_mode()
+    else:
+        live_trader.disable_live_mode()
+
+    status = live_trader.get_status()
+
+    return {
+        "success": True,
+        "mode": status['mode'].lower(),
+        "status": status
+    }
+
+
+@app.get("/api/trading/status")
+async def get_trading_status():
+    """Get detailed trading status including safety limits."""
+    if not LIVE_TRADER_AVAILABLE or not live_trader:
+        return {
+            "available": False,
+            "error": "Live trader not available"
+        }
+
+    return {
+        "available": True,
+        "status": live_trader.get_status()
+    }
+
+
+# ============================================================================
+# BACKTESTING ENDPOINTS
+# ============================================================================
+
+class BacktestRequest(BaseModel):
+    """Request model for running a backtest."""
+    starting_balance: float = 1000.0
+    max_position_usd: float = 100.0
+    max_daily_loss: float = 500.0
+    min_whale_quality: int = 50
+    position_size_pct: float = 0.05
+    days_back: int = 30  # How many days of history to test
+    whale_addresses: list = None  # Optional: specific whales to test
+
+
+@app.post("/api/backtest/run")
+async def run_backtest(request: BacktestRequest):
+    """
+    Run a backtest simulation with the specified parameters.
+
+    This simulates copy trading strategy against historical whale trades
+    to evaluate performance without risking real money.
+    """
+    if not BACKTESTER_AVAILABLE or not Backtester or not BacktestConfig:
+        return {
+            "success": False,
+            "error": "Backtester not available"
+        }
+
+    try:
+        # Create backtest config
+        config = BacktestConfig(
+            starting_balance=Decimal(str(request.starting_balance)),
+            max_position_usd=Decimal(str(request.max_position_usd)),
+            max_daily_loss=Decimal(str(request.max_daily_loss)),
+            min_whale_quality=request.min_whale_quality,
+            position_size_pct=Decimal(str(request.position_size_pct)),
+            start_date=datetime.utcnow() - timedelta(days=request.days_back),
+            whale_addresses=request.whale_addresses
+        )
+
+        # Run backtest
+        backtester = Backtester(config)
+        result = backtester.run_backtest()
+
+        # Format results for JSON
+        return {
+            "success": True,
+            "results": {
+                "performance": {
+                    "starting_balance": float(result.starting_balance),
+                    "ending_balance": float(result.ending_balance),
+                    "total_pnl": float(result.total_pnl),
+                    "total_pnl_pct": float(result.total_pnl_pct),
+                },
+                "statistics": {
+                    "total_trades": result.total_trades,
+                    "winning_trades": result.winning_trades,
+                    "losing_trades": result.losing_trades,
+                    "win_rate": result.win_rate,
+                },
+                "risk_metrics": {
+                    "max_drawdown": float(result.max_drawdown),
+                    "max_drawdown_pct": float(result.max_drawdown_pct),
+                    "sharpe_ratio": result.sharpe_ratio,
+                },
+                "period": {
+                    "start_date": result.start_date.isoformat() if result.start_date else None,
+                    "end_date": result.end_date.isoformat() if result.end_date else None,
+                    "days": result.days,
+                },
+                "daily_pnl": {
+                    date: float(pnl) for date, pnl in result.daily_pnl.items()
+                },
+                "balance_history": result.balance_history,
+                "whale_performance": {
+                    addr: {
+                        "pseudonym": perf["pseudonym"],
+                        "trades": perf["trades"],
+                        "wins": perf["wins"],
+                        "win_rate": (perf["wins"] / perf["trades"] * 100) if perf["trades"] > 0 else 0,
+                        "total_pnl": float(perf["total_pnl"]),
+                        "quality": perf["quality"]
+                    }
+                    for addr, perf in result.whale_performance.items()
+                },
+                "all_trades": [
+                    {
+                        "timestamp": trade.timestamp.isoformat(),
+                        "whale_pseudonym": trade.whale_pseudonym,
+                        "whale_quality": trade.whale_quality,
+                        "market_title": trade.market_title,
+                        "side": trade.side,
+                        "outcome": trade.outcome,
+                        "price": float(trade.price),
+                        "position_size": float(trade.position_size),
+                        "realized_pnl": float(trade.realized_pnl)
+                    }
+                    for trade in result.trades  # All trades
+                ]
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Error running backtest: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.get("/api/backtest/status")
+async def get_backtest_status():
+    """Check if backtesting is available."""
+    return {
+        "available": BACKTESTER_AVAILABLE,
+        "default_config": {
+            "starting_balance": 1000.0,
+            "max_position_usd": 100.0,
+            "max_daily_loss": 500.0,
+            "min_whale_quality": 50,
+            "position_size_pct": 0.05,
+            "days_back": 30
+        }
+    }
 
 
 if __name__ == "__main__":

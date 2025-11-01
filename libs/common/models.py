@@ -122,6 +122,13 @@ class Whale(Base):
     avg_hold_time = Column(Numeric(10, 2))  # hours
     trade_frequency = Column(Numeric(10, 4))  # trades/day
 
+    # 24h metrics (for real-time insights)
+    trades_24h = Column(Integer)  # Number of trades in last 24 hours
+    volume_24h = Column(Numeric(20, 2))  # Dollar volume in last 24 hours
+    active_trades = Column(Integer)  # Current number of active trades
+    most_recent_trade_at = Column(TIMESTAMP)  # Timestamp of most recent trade
+    last_trade_check_at = Column(TIMESTAMP)  # When we last checked for new trades
+
     # Performance metrics (full history)
     total_pnl = Column(Numeric(20, 2))
     win_rate = Column(Numeric(5, 2))
