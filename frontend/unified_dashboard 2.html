@@ -1,0 +1,2818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>WhaleTracker - Unified Dashboard v2.1</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0e27;
+            color: #e4e4e7;
+            overflow-x: hidden;
+        }
+
+        /* Navigation Bar */
+        .navbar {
+            background: rgba(26, 31, 58, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 0 20px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .nav-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .nav-logo {
+            font-size: 1.6rem;
+        }
+
+        .nav-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 5px;
+        }
+
+        .nav-tab {
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #8892b0;
+            transition: all 0.3s;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            color: #ccd6f6;
+            background: rgba(107, 140, 255, 0.1);
+        }
+
+        .nav-tab.active {
+            color: #6b8cff;
+            background: rgba(107, 140, 255, 0.15);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(74, 222, 128, 0.1);
+            border-radius: 20px;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Layout */
+        .dashboard-container {
+            margin-top: 60px;
+            padding: 20px;
+            max-width: 1800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Top Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(26, 31, 58, 0.9) 0%, rgba(26, 31, 58, 0.7) 100%);
+            border: 1px solid rgba(107, 140, 255, 0.2);
+            border-radius: 10px;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stat-info {
+            flex: 1;
+        }
+
+        .stat-label {
+            color: #8892b0;
+            font-size: 12px;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #6b8cff;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .stat-change.positive {
+            color: #4ade80;
+        }
+
+        .stat-change.negative {
+            color: #ef4444;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            opacity: 0.7;
+        }
+
+        /* Main Content Grid */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* Panel Styles */
+        .panel {
+            background: rgba(26, 31, 58, 0.6);
+            border: 1px solid rgba(107, 140, 255, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: rgba(107, 140, 255, 0.1);
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(107, 140, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #6b8cff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .panel-btn {
+            background: rgba(107, 140, 255, 0.2);
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: #8892b0;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .panel-btn:hover {
+            background: rgba(107, 140, 255, 0.3);
+            color: #ccd6f6;
+        }
+
+        .panel-content {
+            padding: 20px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        /* Whales Table */
+        .whales-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .whales-table th {
+            text-align: left;
+            padding: 10px;
+            color: #8892b0;
+            font-size: 12px;
+            text-transform: uppercase;
+            border-bottom: 1px solid rgba(107, 140, 255, 0.2);
+        }
+
+        .whales-table td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(107, 140, 255, 0.1);
+        }
+
+        .whale-address {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #6b8cff;
+        }
+
+        .whale-score {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .score-high {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .score-medium {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fbbf24;
+        }
+
+        .score-low {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        /* Live Trades Feed */
+        .trade-item {
+            padding: 12px;
+            border-bottom: 1px solid rgba(107, 140, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s;
+        }
+
+        .trade-item:hover {
+            background: rgba(107, 140, 255, 0.05);
+        }
+
+        .trade-info {
+            flex: 1;
+        }
+
+        .trade-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .trade-type.buy {
+            background: rgba(74, 222, 128, 0.2);
+            color: #4ade80;
+        }
+
+        .trade-type.sell {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .trade-market {
+            margin-top: 4px;
+            font-size: 14px;
+            color: #ccd6f6;
+        }
+
+        .trade-details {
+            margin-top: 2px;
+            font-size: 12px;
+            color: #8892b0;
+        }
+
+        .trade-amount {
+            text-align: right;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b8cff;
+        }
+
+        /* Display Format Section */
+        .display-format-section {
+            margin-bottom: 20px;
+        }
+
+        .format-selector {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .format-option {
+            padding: 8px 15px;
+            background: rgba(26, 31, 58, 0.8);
+            border: 1px solid rgba(107, 140, 255, 0.2);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 13px;
+        }
+
+        .format-option:hover {
+            border-color: rgba(107, 140, 255, 0.4);
+            background: rgba(107, 140, 255, 0.1);
+        }
+
+        .format-option.selected {
+            background: rgba(107, 140, 255, 0.2);
+            border-color: #6b8cff;
+            color: #6b8cff;
+        }
+
+        /* Terminal Display */
+        .terminal-display {
+            background: #0d1117;
+            border: 1px solid rgba(107, 140, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #4ade80;
+            min-height: 100px;
+            white-space: pre-wrap;
+        }
+
+        /* Bottom Panels */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        /* Settings Quick Access */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(107, 140, 255, 0.1);
+        }
+
+        .setting-label {
+            color: #8892b0;
+            font-size: 14px;
+        }
+
+        .toggle {
+            width: 42px;
+            height: 22px;
+            background: #2a3155;
+            border-radius: 22px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #6b8cff;
+        }
+
+        .toggle-slider {
+            width: 18px;
+            height: 18px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active .toggle-slider {
+            transform: translateX(20px);
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(26, 31, 58, 0.4);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(107, 140, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(107, 140, 255, 0.5);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Action Buttons */
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(107, 140, 255, 0.4);
+        }
+
+        .action-button.secondary {
+            background: rgba(107, 140, 255, 0.2);
+            border: 1px solid rgba(107, 140, 255, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                display: none;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #30363d;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #58a6ff;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #238636;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: #3fb950;
+        }
+
+        /* Hamburger Menu */
+        .hamburger-menu {
+            display: flex;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 8px;
+            gap: 5px;
+            z-index: 1001;
+        }
+
+        .hamburger-menu span {
+            width: 25px;
+            height: 3px;
+            background-color: #ccd6f6;
+            transition: 0.3s;
+            border-radius: 3px;
+        }
+
+        /* Side Menu */
+        .side-menu {
+            position: fixed;
+            top: 0;
+            left: -300px;
+            width: 300px;
+            height: 100vh;
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            transition: left 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            padding-top: 60px;
+        }
+
+        .side-menu.active {
+            left: 0;
+        }
+
+        .side-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 999;
+        }
+
+        .side-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .side-menu-item {
+            padding: 15px 25px;
+            color: #8b949e;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .side-menu-item:hover {
+            background: #161b22;
+            color: #ccd6f6;
+            border-left-color: #58a6ff;
+        }
+
+        .side-menu-item.active {
+            background: #161b22;
+            color: #58a6ff;
+            border-left-color: #58a6ff;
+        }
+
+        .side-menu-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #30363d;
+            margin-bottom: 10px;
+        }
+
+        .side-menu-header h3 {
+            color: #ccd6f6;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-tabs {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Side Menu Overlay -->
+    <div class="side-menu-overlay" id="sideMenuOverlay" onclick="toggleSideMenu()"></div>
+
+    <!-- Side Menu -->
+    <div class="side-menu" id="sideMenu">
+        <div class="side-menu-header">
+            <h3>Navigation</h3>
+        </div>
+        <div class="side-menu-item active" onclick="switchTabFromSide('overview')">
+            <span>Overview</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('whales')">
+            <span>Whales</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('trades')">
+            <span>Live Trades</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('trading')">
+            <span>Trading</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('settings')">
+            <span>Settings</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('analytics')">
+            <span>Analytics</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('backtest')">
+            <span>Backtest</span>
+        </div>
+        <div class="side-menu-item" onclick="switchTabFromSide('methodology')">
+            <span>Methodology</span>
+        </div>
+    </div>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <div class="hamburger-menu" onclick="toggleSideMenu()">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <span class="nav-title">WhaleTracker</span>
+            </div>
+
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('overview')">Overview</button>
+                <button class="nav-tab" onclick="switchTab('whales')">Whales</button>
+                <button class="nav-tab" onclick="switchTab('trades')">Live Trades</button>
+                <button class="nav-tab" onclick="switchTab('trading')">Trading</button>
+                <button class="nav-tab" onclick="switchTab('settings')">Settings</button>
+                <button class="nav-tab" onclick="switchTab('analytics')">Analytics</button>
+                <button class="nav-tab" onclick="switchTab('backtest')">Backtest</button>
+                <button class="nav-tab" onclick="switchTab('methodology')">Methodology</button>
+            </div>
+
+            <div class="nav-actions">
+                <div class="status-indicator">
+                    <span class="status-dot"></span>
+                    <span>Live Trading</span>
+                </div>
+                <button class="action-button" style="padding: 8px 16px; font-size: 13px;">Emergency Stop</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Dashboard Container -->
+    <div class="dashboard-container">
+        <!-- Overview Tab (Default) -->
+        <div id="overview-tab" class="tab-content active">
+            <!-- Top Stats Bar -->
+            <div class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Total P&L</div>
+                        <div class="stat-value" id="total-pnl">+$8,542</div>
+                        <div class="stat-change positive">+12.5% today</div>
+                    </div>
+                    <div class="stat-icon"></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Win Rate</div>
+                        <div class="stat-value" id="win-rate">73%</div>
+                        <div class="stat-change positive">+2% this week</div>
+                    </div>
+                    <div class="stat-icon"></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Active Whales</div>
+                        <div class="stat-value" id="whale-count">25</div>
+                        <div class="stat-change">145 signals/day</div>
+                    </div>
+                    <div class="stat-icon"></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">24h Volume</div>
+                        <div class="stat-value" id="volume">$125K</div>
+                        <div class="stat-change positive">+8.3%</div>
+                    </div>
+                    <div class="stat-icon"></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Sharpe Ratio</div>
+                        <div class="stat-value" id="sharpe">2.34</div>
+                        <div class="stat-change positive">Excellent</div>
+                    </div>
+                    <div class="stat-icon">⚡</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <div class="stat-label">Max Drawdown</div>
+                        <div class="stat-value" id="drawdown">-8%</div>
+                        <div class="stat-change">Within limits</div>
+                    </div>
+                    <div class="stat-icon">🛡️</div>
+                </div>
+            </div>
+
+            <!-- Main Content Grid -->
+            <div class="content-grid">
+                <!-- Left Column - Main Display -->
+                <div>
+                    <!-- Terminal Display with Format Selector -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span>📟</span>
+                                <span>Live Status Display</span>
+                            </div>
+                            <div class="format-selector">
+                                <button class="format-option" onclick="setDisplayFormat('single')">1 Line</button>
+                                <button class="format-option" onclick="setDisplayFormat('status')">2 Lines</button>
+                                <button class="format-option" onclick="setDisplayFormat('metrics')">4 Lines</button>
+                                <button class="format-option selected" onclick="setDisplayFormat('mini')">Mini</button>
+                                <button class="format-option" onclick="setDisplayFormat('compact')">Full</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <div class="terminal-display" id="terminal-display">
+WHALE TRADER 22:36:45
+DB: API: WS: Engine: Monitor:
+Trades:1456 Win:73% P&L:+$8,542
+Whales:25 Signals:145 Exposure:$45K
+Last: BUY BTC>100k $5K +12.5%
+
+⚠ Loss limit 8.5%
+
+[Q]uit [R]efresh [S]ettings
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Top Whales Panel -->
+                    <div class="panel" style="margin-top: 20px;">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span></span>
+                                <span>Top Performing Whales</span>
+                            </div>
+                            <div class="panel-actions">
+                                <button class="panel-btn">Refresh</button>
+                                <button class="panel-btn">Export</button>
+                            </div>
+                        </div>
+                        <div class="panel-content">
+                            <table class="whales-table">
+                                <thead>
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>WQS Score</th>
+                                        <th>Win Rate</th>
+                                        <th>P&L (30d)</th>
+                                        <th>Trades</th>
+                                        <th>Copy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="whales-tbody">
+                                    <tr>
+                                        <td><span class="whale-address">0x1234...5678</span></td>
+                                        <td><span class="whale-score score-high">0.92</span></td>
+                                        <td>78%</td>
+                                        <td style="color: #4ade80;">+$45,320</td>
+                                        <td>234</td>
+                                        <td><button class="panel-btn">Enable</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="whale-address">0xabcd...ef12</span></td>
+                                        <td><span class="whale-score score-high">0.88</span></td>
+                                        <td>71%</td>
+                                        <td style="color: #4ade80;">+$38,150</td>
+                                        <td>189</td>
+                                        <td><button class="panel-btn">Enable</button></td>
+                                    </tr>
+                                    <tr>
+                                        <td><span class="whale-address">0x9876...5432</span></td>
+                                        <td><span class="whale-score score-medium">0.75</span></td>
+                                        <td>69%</td>
+                                        <td style="color: #4ade80;">+$22,840</td>
+                                        <td>156</td>
+                                        <td><button class="panel-btn">Enable</button></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column - Live Feed -->
+                <div>
+                    <!-- Live Trades Feed -->
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                <span>⚡</span>
+                                <span>Live Trades</span>
+                            </div>
+                            <div class="panel-actions">
+                                <button class="panel-btn">Pause</button>
+                            </div>
+                        </div>
+                        <div class="panel-content" id="live-trades">
+                            <div class="trade-item">
+                                <div class="trade-info">
+                                    <span class="trade-type buy">BUY</span>
+                                    <div class="trade-market">Bitcoin > $100k by EOY</div>
+                                    <div class="trade-details">Whale: 0x1234...5678 • Nov 1 23:44:52</div>
+                                </div>
+                                <div class="trade-amount">$5,000</div>
+                            </div>
+                            <div class="trade-item">
+                                <div class="trade-info">
+                                    <span class="trade-type sell">SELL</span>
+                                    <div class="trade-market">Trump 2024 President</div>
+                                    <div class="trade-details">Whale: 0xabcd...ef12 • Nov 1 23:41:36</div>
+                                </div>
+                                <div class="trade-amount">$2,500</div>
+                            </div>
+                            <div class="trade-item">
+                                <div class="trade-info">
+                                    <span class="trade-type buy">BUY</span>
+                                    <div class="trade-market">ETH > $5k March 2025</div>
+                                    <div class="trade-details">Whale: 0x9876...5432 • Nov 1 23:38:14</div>
+                                </div>
+                                <div class="trade-amount">$8,200</div>
+                            </div>
+                            <div class="trade-item">
+                                <div class="trade-info">
+                                    <span class="trade-type buy">BUY</span>
+                                    <div class="trade-market">Fed Rate Cut December</div>
+                                    <div class="trade-details">Whale: 0x1234...5678 • Nov 1 23:34:27</div>
+                                </div>
+                                <div class="trade-amount">$3,800</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Panels -->
+            <div class="bottom-grid">
+                <!-- Quick Settings -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span></span>
+                            <span>Quick Settings</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="switchTab('settings')">All Settings</button>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <span class="setting-label">Copy Trading</span>
+                                <div class="toggle active" onclick="toggleSwitch(this)">
+                                    <div class="toggle-slider"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">Paper Trading</span>
+                                <div class="toggle" onclick="toggleSwitch(this)">
+                                    <div class="toggle-slider"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">Auto-Rebalance</span>
+                                <div class="toggle active" onclick="toggleSwitch(this)">
+                                    <div class="toggle-slider"></div>
+                                </div>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">Risk Alerts</span>
+                                <div class="toggle active" onclick="toggleSwitch(this)">
+                                    <div class="toggle-slider"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Status -->
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span>🔧</span>
+                            <span>System Status</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <span class="setting-label">Database</span>
+                                <span style="color: #4ade80;">Connected</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">WebSocket</span>
+                                <span style="color: #4ade80;">Active</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">API Server</span>
+                                <span style="color: #4ade80;">Online</span>
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label">Memory Usage</span>
+                                <span style="color: #fbbf24;">45%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other Tabs (Hidden by default) -->
+        <div id="whales-tab" class="tab-content">
+            <!-- Whales content will be loaded here -->
+        </div>
+
+        <div id="trades-tab" class="tab-content">
+            <!-- Trades content will be loaded here -->
+        </div>
+
+        <div id="trading-tab" class="tab-content">
+            <div style="margin-bottom: 25px;">
+                <h2 style="color: white; margin-bottom: 15px;">Copy Trading</h2>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div style="display: flex; gap: 15px; align-items: center;">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="color: #8b949e;">Mode:</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="trading-mode-toggle" onchange="toggleTradingMode()">
+                                <span class="toggle-slider"></span>
+                            </label>
+                            <span id="trading-mode-label" style="color: #58a6ff; font-weight: 600;">PAPER TRADING</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px; padding-left: 15px; border-left: 1px solid #30363d;">
+                            <span style="color: #8b949e;">Position Size:</span>
+                            <span id="position-size-label" style="color: white; font-weight: 600;">$1.00</span>
+                        </div>
+                    </div>
+                    <button class="action-button" onclick="refreshCopyTrades()" style="padding: 8px 16px;">
+                        Refresh
+                    </button>
+                </div>
+            </div>
+
+            <div class="data-table-container" style="background: #161b22; border-radius: 8px; padding: 20px;">
+                <h3 style="color: white; margin-bottom: 15px;">Active Copy Trades</h3>
+                <div class="table-wrapper">
+                    <table id="copy-trades-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Market</th>
+                                <th>Whale</th>
+                                <th>Side</th>
+                                <th>Size</th>
+                                <th>Price</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>P&L</th>
+                            </tr>
+                        </thead>
+                        <tbody id="copy-trades-tbody">
+                            <!-- Copy trades will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div id="settings-tab" class="tab-content">
+            <!-- Settings content will be loaded here -->
+        </div>
+
+        <div id="analytics-tab" class="tab-content">
+            <!-- Analytics content will be loaded here -->
+        </div>
+
+        <div id="backtest-tab" class="tab-content">
+            <!-- Backtest content will be loaded here -->
+        </div>
+
+        <div id="methodology-tab" class="tab-content">
+            <div style="max-width: 1400px; margin: 0 auto; padding: 30px;">
+                <h2 style="color: #ccd6f6; margin-bottom: 30px; font-size: 28px;">About This Software</h2>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">System Overview</h3>
+                    <p style="color: #8b949e; line-height: 1.8; margin-bottom: 15px;">
+                        The Polymarket Whale Copy Trading System is an automated trading platform that identifies and replicates the trading strategies of successful Polymarket traders ("whales"). The system monitors blockchain activity on Polygon, analyzes trader performance metrics, and executes copy trades in real-time based on configurable risk parameters.
+                    </p>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Core Architecture</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Technology Stack:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li>Backend: Python 3.11+ with FastAPI web framework</li>
+                            <li>Database: PostgreSQL with SQLAlchemy ORM</li>
+                            <li>Blockchain: Polygon network integration via Web3.py</li>
+                            <li>APIs: Polymarket CLOB API, Gamma API for market data</li>
+                            <li>Frontend: HTML/JavaScript single-page dashboard</li>
+                            <li>Real-time Communication: WebSockets for live updates</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Directory Structure:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><code>/api</code> - FastAPI backend server (main.py)</li>
+                            <li><code>/src</code> - Core business logic and services</li>
+                            <li><code>/libs/common</code> - Shared database models and utilities</li>
+                            <li><code>/scripts</code> - Standalone execution scripts for whale discovery, metrics updates, backtesting</li>
+                            <li><code>/frontend</code> - Dashboard UI (unified_dashboard.html)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Whale Discovery & Qualification</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Discovery Process:</strong></p>
+                        <p style="margin-bottom: 15px;">
+                            The system identifies profitable traders through multiple discovery methods:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>Blockchain Scanning:</strong> Monitors Polygon CTF Exchange contract (0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E) for high-volume traders</li>
+                            <li><strong>Market Analysis:</strong> Tracks traders across multiple Polymarket events and markets</li>
+                            <li><strong>Historical Performance:</strong> Analyzes past trades via CLOB API endpoints</li>
+                            <li><strong>Continuous Discovery:</strong> Background scripts (discover_best_whales.py, ultra_whale_discovery.py) run periodically to find new profitable traders</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Quality Scoring Algorithm:</strong></p>
+                        <p style="margin-bottom: 15px;">
+                            Each whale receives a Quality Score (0-100) calculated from weighted metrics:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>Win Rate (30%):</strong> Percentage of profitable trades</li>
+                            <li><strong>Total Volume (25%):</strong> USD volume traded (normalized)</li>
+                            <li><strong>Sharpe Ratio (20%):</strong> Risk-adjusted returns</li>
+                            <li><strong>Total P&L (15%):</strong> Net profit/loss in USD</li>
+                            <li><strong>Trade Count (10%):</strong> Number of completed trades (minimum threshold required)</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;">
+                            Only whales meeting minimum thresholds (e.g., >20 trades, >60% win rate) are enabled for copy trading. Metrics are updated continuously via update_whale_metrics.py script.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Trade Monitoring & Execution</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Real-Time Monitoring:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li>Continuous polling of Polymarket CLOB API for new trades from tracked whales</li>
+                            <li>WebSocket connections for instant market updates</li>
+                            <li>Trade deduplication and validation before execution</li>
+                            <li>Market metadata fetching (titles, outcomes) from Gamma API</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Copy Trading Logic:</strong></p>
+                        <p style="margin-bottom: 15px;">
+                            When a whale makes a trade, the system:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li>Validates whale quality score meets minimum threshold (default: 50)</li>
+                            <li>Checks risk limits (max position size, daily loss limits)</li>
+                            <li>Calculates position size based on configured percentage</li>
+                            <li>Executes mirrored trade on same market/outcome</li>
+                            <li>Records trade with full metadata (timestamp, market, side, price, size)</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Trading Modes:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>Paper Trading:</strong> Simulated trades with $1 default position size, no real money risk</li>
+                            <li><strong>Live Trading:</strong> Real transactions on Polymarket using connected wallet</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Backtesting Engine</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;">
+                            The integrated backtesting system (src/services/backtester.py) allows historical performance simulation:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>Historical Data:</strong> Replays actual whale trades from database within specified date ranges</li>
+                            <li><strong>Configurable Parameters:</strong> Starting balance, position sizing, max position, daily loss limits</li>
+                            <li><strong>Risk Management:</strong> Enforces same rules as live trading (position limits, stop-loss triggers)</li>
+                            <li><strong>Performance Metrics:</strong> Calculates win rate, total P&L, Sharpe ratio, max drawdown</li>
+                            <li><strong>Market Outcome Integration:</strong> Uses actual market resolutions when available, fallback estimation otherwise</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;">
+                            Backtests can be run via the Dashboard (Backtest tab) or command-line scripts (backtest_all_whales.py).
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Database Schema</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Core Tables (libs/common/models.py):</strong></p>
+
+                        <p style="margin-bottom: 10px;"><strong>Whale Table:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px; font-family: monospace; font-size: 13px;">
+                            <li>address (primary key) - Ethereum address</li>
+                            <li>pseudonym - Optional display name</li>
+                            <li>quality_score - Calculated 0-100 score</li>
+                            <li>total_volume, total_trades - Aggregate metrics</li>
+                            <li>win_rate, sharpe_ratio, total_pnl - Performance metrics</li>
+                            <li>is_copying_enabled - Boolean flag for copy trading status</li>
+                            <li>tier - Classification (diamond/platinum/gold/silver/bronze)</li>
+                        </ul>
+
+                        <p style="margin-bottom: 10px;"><strong>Trade Table:</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px; font-family: monospace; font-size: 13px;">
+                            <li>trade_id (primary key) - Unique identifier</li>
+                            <li>trader_address - Foreign key to Whale</li>
+                            <li>market_id, token_id - Polymarket identifiers</li>
+                            <li>market_title - Human-readable market name</li>
+                            <li>side - BUY or SELL</li>
+                            <li>size, price, amount - Trade details</li>
+                            <li>timestamp - Trade execution time</li>
+                            <li>is_whale_trade - Distinguishes whale trades from copy trades</li>
+                            <li>followed - Whether this trade was copied</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">API Endpoints</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;">
+                            The FastAPI backend (api/main.py) exposes RESTful endpoints on port 8000:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px; font-family: monospace; font-size: 13px;">
+                            <li>GET /api/stats/summary - Overall system statistics</li>
+                            <li>GET /api/whales - List of all tracked whales with filters</li>
+                            <li>GET /api/trades - Historical trades with pagination</li>
+                            <li>POST /api/backtest/run - Execute backtesting simulation</li>
+                            <li>GET /api/analytics - Performance analytics data</li>
+                            <li>GET /dashboard - Main dashboard HTML</li>
+                            <li>WebSocket /ws - Real-time trade notifications</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;">
+                            All endpoints support CORS for local development and return JSON responses with error handling.
+                        </p>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Key Scripts & Automation</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>discover_best_whales.py:</strong> Scans blockchain for new profitable traders</li>
+                            <li><strong>fetch_whale_trades.py:</strong> Retrieves historical trades from Polymarket API</li>
+                            <li><strong>update_whale_metrics.py:</strong> Recalculates quality scores and performance metrics</li>
+                            <li><strong>filter_quality_whales.py:</strong> Applies minimum thresholds and enables/disables whales</li>
+                            <li><strong>backtest_all_whales.py:</strong> Runs backtests across all enabled whales</li>
+                            <li><strong>run_copy_trading.py:</strong> Launches live copy trading engine</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Risk Management</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;">
+                            Built-in safeguards to protect capital:
+                        </p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px;">
+                            <li><strong>Position Size Limits:</strong> Configurable max USD per trade (default: $100-$1000)</li>
+                            <li><strong>Daily Loss Limits:</strong> Stop trading after daily loss threshold (default: $500)</li>
+                            <li><strong>Whale Quality Filter:</strong> Only copy trades from whales above minimum score (default: 50)</li>
+                            <li><strong>Portfolio Exposure:</strong> Track total exposure across all open positions</li>
+                            <li><strong>Emergency Stop:</strong> Dashboard button to halt all trading immediately</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div style="background: #161b22; border-radius: 12px; padding: 30px;">
+                    <h3 style="color: #58a6ff; margin-bottom: 20px;">Configuration & Setup</h3>
+                    <div style="color: #8b949e; line-height: 1.8;">
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Environment Variables (.env):</strong></p>
+                        <ul style="margin-left: 20px; margin-bottom: 20px; font-family: monospace; font-size: 13px;">
+                            <li>DATABASE_URL - PostgreSQL connection string</li>
+                            <li>POLYGON_RPC_URL - Polygon node endpoint</li>
+                            <li>PRIVATE_KEY - Trading wallet private key (live mode only)</li>
+                            <li>GRAPH_API_KEY - The Graph API key for blockchain queries</li>
+                        </ul>
+
+                        <p style="margin-bottom: 15px;"><strong style="color: #ccd6f6;">Running the System:</strong></p>
+                        <ol style="margin-left: 20px; margin-bottom: 20px;">
+                            <li>Start PostgreSQL database</li>
+                            <li>Run database migrations (if any)</li>
+                            <li>Execute python3 api/main.py to start API server</li>
+                            <li>Access dashboard at http://localhost:8000/dashboard</li>
+                            <li>Optionally run discovery scripts to populate whale database</li>
+                            <li>Enable paper or live trading mode in Trading tab</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Side menu toggle
+        function toggleSideMenu() {
+            const sideMenu = document.getElementById('sideMenu');
+            const overlay = document.getElementById('sideMenuOverlay');
+            sideMenu.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Switch tab from side menu
+        function switchTabFromSide(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all nav tabs and side menu items
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.side-menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to selected side menu item
+            event.target.closest('.side-menu-item').classList.add('active');
+
+            // Close side menu
+            toggleSideMenu();
+
+            // Load content for specific tabs
+            if (tabName === 'whales') {
+                loadWhalesTab();
+            } else if (tabName === 'trades') {
+                loadTradesTab();
+            } else if (tabName === 'trading') {
+                loadTradingTab();
+            } else if (tabName === 'settings') {
+                loadSettingsTab();
+            } else if (tabName === 'analytics') {
+                loadAnalyticsTab();
+            } else if (tabName === 'backtest') {
+                loadBacktestTab();
+            }
+        }
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Remove active class from all nav tabs
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Add active class to selected nav tab
+            event.target.classList.add('active');
+
+            // Load content for specific tabs
+            if (tabName === 'whales') {
+                loadWhalesTab();
+            } else if (tabName === 'trades') {
+                loadTradesTab();
+            } else if (tabName === 'trading') {
+                loadTradingTab();
+            } else if (tabName === 'settings') {
+                loadSettingsTab();
+            } else if (tabName === 'analytics') {
+                loadAnalyticsTab();
+            } else if (tabName === 'backtest') {
+                loadBacktestTab();
+            }
+        }
+
+        // Display format switching
+        const displayFormats = {
+            'single': 'WHALE TRADER | P&L:+$8,542 Win:73% Sharpe:2.34 | ',
+            'status': 'WHALE TRADER │ P&L:+$8,542 Win:73%\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+            'metrics': 'P&L:+$8,542 │ Win:73% │ Sharpe:2.34\nWhales:25  │ Signals:145/d │ VaR:12%\nVolume:$125K │ Trades:1456\nLast: BUY BTC>100k +12.5%',
+            'mini': 'WHALE TRADER 22:36:45\nDB: API: WS: Engine: Monitor:\nTrades:1456 Win:73% P&L:+$8,542\nWhales:25 Signals:145 Exposure:$45K\nLast: BUY BTC>100k $5K +12.5%\n\n⚠ Loss limit 8.5%\n\n[Q]uit [R]efresh [S]ettings',
+            'compact': 'POLYMARKET WHALE TRADER - 22:36:45\n────────────────────────────────────\nStatus: DB: API: WS: Engine:\n\nPerformance:\n  Trades:1456 WinRate:73% Vol:$125K\n  Sharpe:2.34 DD:8% VaR:12%\n\nRecent:\n  BUY  0x1234BTC>100k    $5K  +12.5%\n  SELL 0x5678Trump2024   $2.5K -3.2%\n\nAlert: ⚠ Approaching daily loss limit\n\n[Q]uit [R]efresh [D]etails'
+        };
+
+        function setDisplayFormat(format) {
+            // Update button states
+            document.querySelectorAll('.format-option').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+
+            // Update display
+            document.getElementById('terminal-display').textContent = displayFormats[format];
+
+            // Save to settings
+            fetch('http://localhost:8890/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    display: { format: format }
+                })
+            }).catch(err => console.error('Error saving format:', err));
+        }
+
+        // Toggle switches
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        // Load tab content functions
+        function loadWhalesTab() {
+            document.getElementById('whales-tab').innerHTML = `
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span></span>
+                            <span>All Whales</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="refreshWhales()">Refresh</button>
+                            <button class="panel-btn" onclick="exportWhales()">Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="panel-content" style="display: flex; flex-direction: column; height: calc(100vh - 280px);">
+                        <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                            <table class="whales-table" style="width: 100%;">
+                                <thead style="position: sticky; top: 0; background: #0d1117; z-index: 10;">
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>Tier</th>
+                                        <th>Quality Score</th>
+                                        <th>Total Volume</th>
+                                        <th>Total Trades</th>
+                                        <th>Win Rate</th>
+                                        <th>Sharpe Ratio</th>
+                                        <th>Total P&L</th>
+                                        <th>Last Trade</th>
+                                        <th>Profile</th>
+                                        <th>Copy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-whales-tbody">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="padding: 15px 20px; background: #0d1117; border-top: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0;">
+                            <div style="color: #8892b0;">
+                                Showing <span id="whale-count">0</span> whales
+                            </div>
+                            <button class="panel-btn" onclick="loadMoreWhales()">Load More</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            fetchAllWhales();
+        }
+
+        async function fetchAllWhales() {
+            try {
+                const response = await fetch('http://localhost:8000/api/whales');
+                const whales = await response.json();
+                const tbody = document.getElementById('all-whales-tbody');
+
+                if (Array.isArray(whales)) {
+                    document.getElementById('whale-count').textContent = whales.length;
+                    tbody.innerHTML = whales.map(whale => {
+                        const winRate = parseFloat(whale.win_rate || 0);
+                        const totalPnL = parseFloat(whale.total_pnl || 0);
+                        const qualityScore = parseFloat(whale.quality_score || 0);
+
+                        return `
+                            <tr>
+                                <td><span class="whale-address" style="font-size: 11px;">${whale.address}</span></td>
+                                <td><span style="color: ${whale.tier === 'MEGA' ? '#fbbf24' : '#6b8cff'}">${whale.tier || 'STANDARD'}</span></td>
+                                <td>
+                                    <span class="whale-score ${qualityScore >= 90 ? 'score-high' : qualityScore >= 70 ? 'score-medium' : 'score-low'}">
+                                        ${qualityScore.toFixed(1)}
+                                    </span>
+                                </td>
+                                <td>$${(whale.total_volume || 0).toLocaleString()}</td>
+                                <td>${(whale.total_trades || 0).toLocaleString()}</td>
+                                <td>${winRate.toFixed(1)}%</td>
+                                <td>${(whale.sharpe_ratio || 0).toFixed(2)}</td>
+                                <td style="color: ${totalPnL >= 0 ? '#4ade80' : '#ef4444'}">
+                                    ${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toLocaleString()}
+                                </td>
+                                <td>${whale.last_active ? new Date(whale.last_active).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <a href="${whale.profile_url || '#'}" target="_blank" style="color: #6b8cff;">View</a>
+                                </td>
+                                <td>
+                                    <button class="panel-btn" onclick="toggleCopyWhale('${whale.address}')">
+                                        ${whale.is_copying_enabled ? 'Disable' : 'Enable'}
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No whales available</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching whales:', error);
+                document.getElementById('all-whales-tbody').innerHTML =
+                    '<tr><td colspan="11" style="text-align: center; color: #ef4444;">Error loading whales</td></tr>';
+            }
+        }
+
+        function refreshWhales() {
+            fetchAllWhales();
+        }
+
+        function exportWhales() {
+            window.location.href = 'http://localhost:8000/api/export/whales';
+        }
+
+        function loadMoreWhales() {
+            // Implementation for pagination
+            console.log('Loading more whales...');
+        }
+
+        function toggleCopyWhale(address) {
+            console.log('Toggling copy for whale:', address);
+            // Implementation to enable/disable whale copying
+        }
+
+        function loadTradesTab() {
+            document.getElementById('trades-tab').innerHTML = `
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span></span>
+                            <span>Trade History</span>
+                        </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="refreshTrades()">Refresh</button>
+                            <button class="panel-btn" onclick="filterTrades()">Filter</button>
+                            <button class="panel-btn" onclick="exportTrades()">Export CSV</button>
+                        </div>
+                    </div>
+                    <div class="panel-content" style="display: flex; flex-direction: column; height: calc(100vh - 280px);">
+                        <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
+                            <table class="whales-table" style="width: 100%;">
+                                <thead style="position: sticky; top: 0; background: #0d1117; z-index: 10;">
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Whale</th>
+                                        <th>Market</th>
+                                        <th>Outcome</th>
+                                        <th>Amount</th>
+                                        <th>Price</th>
+                                        <th>Shares</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trades-history-tbody">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="padding: 15px 20px; background: #0d1117; border-top: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0;">
+                            <div style="color: #8892b0;">
+                                Showing <span id="trade-count">0</span> trades
+                            </div>
+                            <div>
+                                <button class="panel-btn" onclick="previousPage()">← Previous</button>
+                                <span style="margin: 0 15px; color: #8892b0;">Page <span id="current-page">1</span></span>
+                                <button class="panel-btn" onclick="nextPage()">Next </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            fetchTradeHistory();
+        }
+
+        let currentPage = 1;
+        const tradesPerPage = 50;
+
+        async function fetchTradeHistory(page = 1) {
+            try {
+                const response = await fetch(`http://localhost:8000/api/trades?page=${page}&limit=${tradesPerPage}`);
+                const trades = await response.json();
+                const tbody = document.getElementById('trades-history-tbody');
+
+                if (Array.isArray(trades)) {
+                    document.getElementById('trade-count').textContent = trades.length;
+                    document.getElementById('current-page').textContent = page;
+
+                    tbody.innerHTML = trades.map(trade => {
+                        // Parse ISO timestamp string and convert to PST
+                        const timestamp = trade.timestamp ? new Date(trade.timestamp) : new Date();
+                        const pstTime = timestamp.toLocaleString('en-US', {
+                            timeZone: 'America/Los_Angeles',
+                            month: '2-digit',
+                            day: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        });
+                        const amount = parseFloat(trade.amount || 0);
+                        const price = parseFloat(trade.price || 0);
+
+                        // Whale name (always show full trader_address split on two lines)
+                        let whaleDisplay = 'Unknown';
+                        if (trade.trader_address && trade.trader_address.length > 20) {
+                            // Show full address split into two lines
+                            const addr = trade.trader_address;
+                            whaleDisplay = `<div style="font-size: 9px; line-height: 1.3;">${addr.substring(0, 21)}<br>${addr.substring(21)}</div>`;
+                        } else if (trade.trader_address) {
+                            whaleDisplay = `<div style="font-size: 10px;">${trade.trader_address}</div>`;
+                        }
+
+                        // Market title or market ID
+                        let market = 'Unknown Market';
+                        if (trade.market_title) {
+                            market = trade.market_title;
+                        } else if (trade.market_id && trade.market_id !== '0') {
+                            market = `Market ${trade.market_id.substring(0, 8)}...`;
+                        }
+
+                        return `
+                            <tr>
+                                <td>${pstTime} PST</td>
+                                <td>
+                                    <span class="trade-type ${(trade.side || 'BUY').toLowerCase()}">
+                                        ${trade.side || 'BUY'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="whale-address">
+                                        ${whaleDisplay}
+                                    </span>
+                                </td>
+                                <td title="${trade.market_id || ''}" style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${market}</td>
+                                <td>${trade.outcome || 'YES'}</td>
+                                <td>$${amount.toLocaleString()}</td>
+                                <td>${price.toFixed(4)}</td>
+                                <td>${(trade.size || 0).toLocaleString()}</td>
+                                <td>
+                                    ${trade.market_title ?
+                                        `<a href="https://polymarket.com/search?q=${encodeURIComponent(trade.market_title)}" target="_blank" class="panel-btn" style="display: inline-block; padding: 6px 12px; text-decoration: none;">Search</a>` :
+                                        `<a href="https://polygonscan.com/address/${trade.trader_address}" target="_blank" class="panel-btn" style="display: inline-block; padding: 6px 12px; text-decoration: none;">Trader</a>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No trades available</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching trades:', error);
+                document.getElementById('trades-history-tbody').innerHTML =
+                    '<tr><td colspan="10" style="text-align: center; color: #ef4444;">Error loading trades</td></tr>';
+            }
+        }
+
+        function refreshTrades() {
+            fetchTradeHistory(currentPage);
+        }
+
+        function filterTrades() {
+            // Implementation for trade filtering
+            console.log('Opening filter dialog...');
+        }
+
+        function exportTrades() {
+            window.location.href = 'http://localhost:8000/api/export/trades';
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchTradeHistory(currentPage);
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            fetchTradeHistory(currentPage);
+        }
+
+        function viewTradeDetails(tradeId) {
+            console.log('Viewing trade details:', tradeId);
+            // Implementation to show trade details modal
+        }
+
+        function loadAnalyticsTab() {
+            document.getElementById('analytics-tab').innerHTML = `
+                <div style="padding: 30px; max-width: 1400px; margin: 0 auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                        <div>
+                            <h2 style="color: #ccd6f6; margin-bottom: 5px; font-size: 1.8rem;"> Analytics Dashboard</h2>
+                            <p style="color: #8892b0;">Real-time performance metrics and whale analytics</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="panel-btn" onclick="refreshAnalytics()" style="background: rgba(107, 140, 255, 0.2); border: 1px solid rgba(107, 140, 255, 0.4); color: #6b8cff; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s;">Refresh</button>
+                            <button class="panel-btn" onclick="exportAnalytics()" style="background: rgba(107, 140, 255, 0.2); border: 1px solid rgba(107, 140, 255, 0.4); color: #6b8cff; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s;">Export Report</button>
+                        </div>
+                    </div>
+
+                    <!-- Key Metrics Summary -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                            <div class="metric-card" style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <div style="color: #8892b0; font-size: 12px; margin-bottom: 8px;">Active Whales</div>
+                                <div id="active-whales-count" style="color: #6b8cff; font-size: 32px; font-weight: bold;">50</div>
+                                <div style="color: #4ade80; font-size: 12px; margin-top: 5px;">↑ 12% from yesterday</div>
+                            </div>
+                            <div class="metric-card" style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <div style="color: #8892b0; font-size: 12px; margin-bottom: 8px;">24h Volume</div>
+                                <div id="volume-24h" style="color: #6b8cff; font-size: 32px; font-weight: bold;">$265,459</div>
+                                <div style="color: #4ade80; font-size: 12px; margin-top: 5px;">↑ 8.5% from average</div>
+                            </div>
+                            <div class="metric-card" style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <div style="color: #8892b0; font-size: 12px; margin-bottom: 8px;">Total P&L</div>
+                                <div id="total-pnl-analytics" style="color: #4ade80; font-size: 32px; font-weight: bold;">+$32,507</div>
+                                <div style="color: #6b8cff; font-size: 12px; margin-top: 5px;">82.2% win rate</div>
+                            </div>
+                            <div class="metric-card" style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <div style="color: #8892b0; font-size: 12px; margin-bottom: 8px;">Avg Sharpe</div>
+                                <div id="avg-sharpe" style="color: #6b8cff; font-size: 32px; font-weight: bold;">2.34</div>
+                                <div style="color: #8892b0; font-size: 12px; margin-top: 5px;">Top 10 whales</div>
+                            </div>
+                        </div>
+
+                        <!-- Performance Charts Section -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+                            <div style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <h4 style="color: #ccd6f6; margin-bottom: 15px;">P&L Over Time</h4>
+                                <div id="pnl-chart" style="height: 250px; display: flex; align-items: center; justify-content: center; color: #8892b0;">
+                                    <canvas id="pnl-canvas" style="width: 100%; height: 100%;"></canvas>
+                                </div>
+                            </div>
+                            <div style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                                <h4 style="color: #ccd6f6; margin-bottom: 15px;">Win Rate Distribution</h4>
+                                <div id="winrate-chart" style="height: 250px; display: flex; align-items: center; justify-content: center; color: #8892b0;">
+                                    <canvas id="winrate-canvas" style="width: 100%; height: 100%;"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top Performing Whales Table -->
+                        <div style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d; margin-bottom: 30px;">
+                            <h4 style="color: #ccd6f6; margin-bottom: 15px;">Top Performing Whales</h4>
+                            <table class="whales-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Whale</th>
+                                        <th>Tier</th>
+                                        <th>Quality Score</th>
+                                        <th>Win Rate</th>
+                                        <th>Total P&L</th>
+                                        <th>Sharpe</th>
+                                        <th>24h Trades</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="top-whales-tbody">
+                                    <tr>
+                                        <td>#1</td>
+                                        <td><span class="whale-address">0xfd2b...1174</span></td>
+                                        <td><span style="color: #fbbf24">MEGA</span></td>
+                                        <td><span class="score-high">100.0</span></td>
+                                        <td>82.2%</td>
+                                        <td style="color: #4ade80">+$32,507</td>
+                                        <td>4.50</td>
+                                        <td>101</td>
+                                    </tr>
+                                    <!-- More rows will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Market Activity Feed -->
+                        <div style="background: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d;">
+                            <h4 style="color: #ccd6f6; margin-bottom: 15px;">Recent Market Activity</h4>
+                            <div id="activity-feed" style="max-height: 300px; overflow-y: auto;">
+                                <div class="activity-item" style="padding: 10px; border-bottom: 1px solid #30363d;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <span style="color: #4ade80;">BUY</span>
+                                            <span style="color: #8892b0; margin-left: 10px;">Bitcoin > $100k by EOY</span>
+                                        </div>
+                                        <div style="text-align: right;">
+                                            <div style="color: #6b8cff;">$5,000</div>
+                                            <div style="color: #8892b0; font-size: 12px;">2 mins ago</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- More activity items will be added dynamically -->
+                            </div>
+                        </div>
+                </div>
+            `;
+
+            // Initialize charts after DOM is ready
+            setTimeout(() => {
+                initializeAnalyticsCharts();
+            }, 100);
+            // Fetch analytics data
+            fetchAnalyticsData();
+        }
+
+        async function initializeAnalyticsCharts() {
+            // Draw P&L Over Time Line Chart
+            const pnlCanvas = document.getElementById('pnl-canvas');
+            if (pnlCanvas && pnlCanvas.getContext) {
+                const ctx = pnlCanvas.getContext('2d');
+                const width = pnlCanvas.width = pnlCanvas.offsetWidth;
+                const height = pnlCanvas.height = pnlCanvas.offsetHeight;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Try to fetch real data from trades endpoint
+                let dataPoints = [];
+                try {
+                    const response = await fetch('http://localhost:8000/api/trades?limit=100');
+                    if (response.ok) {
+                        const trades = await response.json();
+                        if (trades && trades.length > 0) {
+                            // Aggregate P&L over time from trades
+                            let cumulativePnL = 0;
+                            dataPoints = trades.map((trade, index) => {
+                                cumulativePnL += trade.profit_loss || 0;
+                                return { x: index, y: cumulativePnL };
+                            }).filter((_, i) => i % Math.ceil(trades.length / 15) === 0); // Sample 15 points
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not fetch trade data for P&L chart');
+                }
+
+                // If no data available, show message
+                if (dataPoints.length === 0) {
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('No P&L data available', width / 2, height / 2);
+                    return;
+                }
+
+                // Calculate scales
+                const maxY = Math.max(...dataPoints.map(p => p.y));
+                const padding = 40;
+                const chartWidth = width - padding * 2;
+                const chartHeight = height - padding * 2;
+
+                // Draw grid lines
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 1;
+
+                // Horizontal grid lines
+                for (let i = 0; i <= 5; i++) {
+                    const y = padding + (chartHeight / 5) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+
+                    // Y-axis labels
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '11px monospace';
+                    ctx.textAlign = 'right';
+                    const value = '$' + ((maxY / 5) * (5 - i) / 1000).toFixed(1) + 'k';
+                    ctx.fillText(value, padding - 5, y + 3);
+                }
+
+                // Draw the line chart
+                ctx.strokeStyle = '#6b8cff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+
+                dataPoints.forEach((point, index) => {
+                    const x = padding + (chartWidth / (dataPoints.length - 1)) * index;
+                    const y = padding + chartHeight - (point.y / maxY) * chartHeight;
+
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+
+                    // Draw data points
+                    ctx.fillStyle = '#6b8cff';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                ctx.stroke();
+
+                // Draw area under the line
+                ctx.fillStyle = 'rgba(107, 140, 255, 0.1)';
+                ctx.beginPath();
+                dataPoints.forEach((point, index) => {
+                    const x = padding + (chartWidth / (dataPoints.length - 1)) * index;
+                    const y = padding + chartHeight - (point.y / maxY) * chartHeight;
+
+                    if (index === 0) {
+                        ctx.moveTo(x, padding + chartHeight);
+                        ctx.lineTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.lineTo(width - padding, padding + chartHeight);
+                ctx.fill();
+
+                // X-axis labels
+                ctx.fillStyle = '#8892b0';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ['Week 1', 'Week 2'].forEach((label, index) => {
+                    const x = padding + (chartWidth / 2) * index + chartWidth / 4;
+                    ctx.fillText(label, x, height - 10);
+                });
+            }
+
+            // Draw Win Rate Distribution Bar Chart
+            const winrateCanvas = document.getElementById('winrate-canvas');
+            if (winrateCanvas && winrateCanvas.getContext) {
+                const ctx = winrateCanvas.getContext('2d');
+                const width = winrateCanvas.width = winrateCanvas.offsetWidth;
+                const height = winrateCanvas.height = winrateCanvas.offsetHeight;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Try to fetch real data from whales endpoint
+                let data = [];
+                try {
+                    const response = await fetch('http://localhost:8000/api/whales');
+                    if (response.ok) {
+                        const whales = await response.json();
+                        if (whales && whales.length > 0) {
+                            // Calculate distribution of win rates
+                            const bins = {
+                                '<40%': 0,
+                                '40-50%': 0,
+                                '50-60%': 0,
+                                '60-70%': 0,
+                                '70-80%': 0,
+                                '>80%': 0
+                            };
+
+                            whales.forEach(whale => {
+                                const winRate = (whale.win_rate || 0) * 100;
+                                if (winRate < 40) bins['<40%']++;
+                                else if (winRate < 50) bins['40-50%']++;
+                                else if (winRate < 60) bins['50-60%']++;
+                                else if (winRate < 70) bins['60-70%']++;
+                                else if (winRate < 80) bins['70-80%']++;
+                                else bins['>80%']++;
+                            });
+
+                            data = [
+                                { label: '<40%', value: bins['<40%'], color: '#ef4444' },
+                                { label: '40-50%', value: bins['40-50%'], color: '#fbbf24' },
+                                { label: '50-60%', value: bins['50-60%'], color: '#6b8cff' },
+                                { label: '60-70%', value: bins['60-70%'], color: '#4ade80' },
+                                { label: '70-80%', value: bins['70-80%'], color: '#4ade80' },
+                                { label: '>80%', value: bins['>80%'], color: '#22c55e' }
+                            ];
+                        }
+                    }
+                } catch (error) {
+                    console.log('Could not fetch whale data for win rate chart');
+                }
+
+                // If no data available, show message
+                if (data.length === 0 || data.every(d => d.value === 0)) {
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '16px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('No whale data available', width / 2, height / 2);
+                    return;
+                }
+
+                const maxValue = Math.max(...data.map(d => d.value));
+                const padding = 40;
+                const chartWidth = width - padding * 2;
+                const chartHeight = height - padding * 2;
+                const barWidth = chartWidth / data.length * 0.7;
+                const barSpacing = chartWidth / data.length * 0.3;
+
+                // Draw grid lines
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 1;
+
+                // Horizontal grid lines
+                for (let i = 0; i <= 4; i++) {
+                    const y = padding + (chartHeight / 4) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+
+                    // Y-axis labels
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '11px monospace';
+                    ctx.textAlign = 'right';
+                    const value = Math.round((maxValue / 4) * (4 - i));
+                    ctx.fillText(value, padding - 5, y + 3);
+                }
+
+                // Draw bars
+                data.forEach((item, index) => {
+                    const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
+                    const barHeight = (item.value / maxValue) * chartHeight;
+                    const y = padding + chartHeight - barHeight;
+
+                    // Draw bar
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(x, y, barWidth, barHeight);
+
+                    // Draw value on top of bar
+                    ctx.fillStyle = '#ccd6f6';
+                    ctx.font = '12px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(item.value, x + barWidth / 2, y - 5);
+
+                    // Draw label below bar
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(item.label, x + barWidth / 2, height - 10);
+                });
+
+                // Add chart title inside
+                ctx.fillStyle = '#8892b0';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('Whales', 5, 15);
+            }
+        }
+
+        async function fetchAnalyticsData() {
+            try {
+                // Fetch summary statistics
+                const statsResponse = await fetch('http://localhost:8000/api/stats/summary');
+                if (statsResponse.ok) {
+                    const stats = await statsResponse.json();
+                    // Update metrics
+                    if (stats.total_whales) {
+                        document.getElementById('active-whales-count').textContent = stats.total_whales;
+                    }
+                    if (stats.total_volume_24h) {
+                        document.getElementById('volume-24h').textContent = '$' + stats.total_volume_24h.toLocaleString();
+                    }
+                    if (stats.total_pnl) {
+                        const pnlElement = document.getElementById('total-pnl-analytics');
+                        pnlElement.textContent = (stats.total_pnl >= 0 ? '+' : '') + '$' + Math.abs(stats.total_pnl).toLocaleString();
+                        pnlElement.style.color = stats.total_pnl >= 0 ? '#4ade80' : '#ef4444';
+                    }
+                }
+
+                // Fetch top whales
+                const whalesResponse = await fetch('http://localhost:8000/api/whales?limit=5&sort=quality_score');
+                if (whalesResponse.ok) {
+                    const whales = await whalesResponse.json();
+                    updateTopWhalesTable(whales);
+                }
+            } catch (error) {
+                console.error('Error fetching analytics data:', error);
+            }
+        }
+
+        function updateTopWhalesTable(whales) {
+            const tbody = document.getElementById('top-whales-tbody');
+            if (Array.isArray(whales) && whales.length > 0) {
+                tbody.innerHTML = whales.slice(0, 5).map((whale, index) => `
+                    <tr>
+                        <td>#${index + 1}</td>
+                        <td><span class="whale-address" style="font-size: 11px;">${whale.address}</span></td>
+                        <td><span style="color: ${whale.tier === 'MEGA' ? '#fbbf24' : '#6b8cff'}">${whale.tier || 'STANDARD'}</span></td>
+                        <td><span class="${whale.quality_score >= 90 ? 'score-high' : whale.quality_score >= 70 ? 'score-medium' : 'score-low'}">${(whale.quality_score || 0).toFixed(1)}</span></td>
+                        <td>${(whale.win_rate * 100 || 0).toFixed(1)}%</td>
+                        <td style="color: ${whale.total_pnl >= 0 ? '#4ade80' : '#ef4444'}">${whale.total_pnl >= 0 ? '+' : ''}$${Math.abs(whale.total_pnl || 0).toLocaleString()}</td>
+                        <td>${(whale.sharpe_ratio || 0).toFixed(2)}</td>
+                        <td>${whale.trades_24h || 0}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        function refreshAnalytics() {
+            fetchAnalyticsData();
+        }
+
+        function exportAnalytics() {
+            window.location.href = 'http://localhost:8000/api/export/analytics';
+        }
+
+        // Trading tab functions
+        let isPaperTrading = true;
+
+        function loadTradingTab() {
+            refreshCopyTrades();
+        }
+
+        function toggleTradingMode() {
+            const toggle = document.getElementById('trading-mode-toggle');
+            const label = document.getElementById('trading-mode-label');
+            isPaperTrading = !toggle.checked;
+
+            if (isPaperTrading) {
+                label.textContent = 'PAPER TRADING';
+                label.style.color = '#58a6ff';
+            } else {
+                label.textContent = 'REAL MONEY';
+                label.style.color = '#3fb950';
+            }
+        }
+
+        async function refreshCopyTrades() {
+            try {
+                const response = await fetch('http://localhost:8000/api/trades?limit=100');
+                const trades = await response.json();
+
+                const tbody = document.getElementById('copy-trades-tbody');
+                if (!tbody) return;
+
+                if (!trades || trades.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center; color: #8b949e; padding: 40px;">
+                                No copy trades yet. Trades will appear here as whales make moves.
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = trades.slice(0, 50).map(trade => {
+                    // Convert timestamp to PST
+                    const timestamp = trade.timestamp ? new Date(trade.timestamp) : null;
+                    const time = timestamp ? timestamp.toLocaleString('en-US', {
+                        timeZone: 'America/Los_Angeles',
+                        month: '2-digit',
+                        day: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }) + ' PST' : 'Unknown';
+
+                    // Market title or market ID (truncated if too long)
+                    let market = 'Unknown Market';
+                    if (trade.market_title) {
+                        market = trade.market_title;
+                    } else if (trade.market_id && trade.market_id !== '0') {
+                        market = `Market ${trade.market_id.substring(0, 8)}...`;
+                    }
+
+                    // Whale name (pseudonym or truncated address)
+                    let whaleName = 'Unknown';
+                    if (trade.whale_name && trade.whale_name.toLowerCase() !== trade.trader_address.toLowerCase()) {
+                        // Has a pseudonym different from address
+                        whaleName = trade.whale_name.substring(0, 16);
+                    } else if (trade.trader_address) {
+                        // Use shortened address
+                        whaleName = trade.trader_address.substring(0, 6) + '...' + trade.trader_address.substring(38);
+                    }
+
+                    const side = trade.side || 'BUY';
+                    const sideClass = side === 'BUY' ? 'positive' : 'negative';
+                    const size = trade.size ? trade.size.toFixed(2) : '0.00';
+                    const price = trade.price ? trade.price.toFixed(3) : '0.000';
+                    const amount = trade.amount ? trade.amount.toFixed(2) : (isPaperTrading ? '1.00' : '0.00');
+                    const status = isPaperTrading ? 'Paper' : 'Live';
+                    const statusColor = isPaperTrading ? '#58a6ff' : '#3fb950';
+                    const pnl = trade.pnl || 0;
+                    const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+                    const pnlSign = pnl >= 0 ? '+' : '';
+
+                    return `
+                        <tr>
+                            <td>${time}</td>
+                            <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${market}</td>
+                            <td><span style="font-size: 11px;">${whaleName}</span></td>
+                            <td><span class="${sideClass}">${side}</span></td>
+                            <td>${size}</td>
+                            <td>${price}</td>
+                            <td>$${amount}</td>
+                            <td><span style="color: ${statusColor};">${status}</span></td>
+                            <td class="${pnlClass}">${pnlSign}$${Math.abs(pnl).toFixed(2)}</td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error fetching copy trades:', error);
+                const tbody = document.getElementById('copy-trades-tbody');
+                if (tbody) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="9" style="text-align: center; color: #f85149; padding: 40px;">
+                                Error loading trades. Please try again.
+                            </td>
+                        </tr>
+                    `;
+                }
+            }
+        }
+
+        function loadBacktestTab() {
+            // Set default dates
+            const today = new Date();
+            const endDate = today.toISOString().split('T')[0];
+            const startDate = new Date(today.setMonth(today.getMonth() - 4)).toISOString().split('T')[0];
+
+            document.getElementById('backtest-tab').innerHTML = `
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title">
+                            <span></span>
+                            <span>Backtesting</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <h3 style="color: #ccd6f6; margin-bottom: 25px;">Backtest Configuration</h3>
+                        <div class="settings-grid" style="margin-top: 20px; gap: 30px;">
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Start Date</span>
+                                <input id="backtest-start" type="date" value="${startDate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">End Date</span>
+                                <input id="backtest-end" type="date" value="${endDate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Initial Capital ($)</span>
+                                <input id="backtest-capital" type="number" value="10000" min="100" max="1000000" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Position Size (%)</span>
+                                <input id="backtest-position" type="number" value="10" min="1" max="100" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                        </div>
+
+                        <!-- Run Button -->
+                        <button id="run-backtest-btn" onclick="runBacktest()" class="action-button" style="margin-top: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 30px; border-radius: 8px; color: white; border: none; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s;">
+                            Run Backtest
+                        </button>
+
+                        <!-- Progress Bar Container (hidden initially) -->
+                        <div id="backtest-progress-container" style="display: none; margin-top: 40px;">
+                            <h4 style="color: #ccd6f6; margin-bottom: 15px;">Backtest Progress</h4>
+
+                            <!-- Progress Bar -->
+                            <div style="background: #0d1117; border-radius: 10px; padding: 3px; border: 1px solid #30363d;">
+                                <div id="backtest-progress-bar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 30px; border-radius: 7px; width: 0%; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center;">
+                                    <span id="progress-text" style="color: white; font-weight: 600; font-size: 14px;">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Status Message -->
+                            <div id="backtest-status" style="margin-top: 15px; color: #8892b0; font-size: 14px;">
+                                Initializing backtest...
+                            </div>
+
+                            <!-- Metrics Being Calculated -->
+                            <div id="backtest-metrics" style="margin-top: 20px; padding: 20px; background: #0d1117; border-radius: 8px; border: 1px solid #30363d;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Whales Processed</div>
+                                        <div id="whales-processed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0 / 0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Trades Analyzed</div>
+                                        <div id="trades-analyzed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Time Elapsed</div>
+                                        <div id="time-elapsed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0:00</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Est. Time Remaining</div>
+                                        <div id="time-remaining" style="color: #6b8cff; font-size: 20px; font-weight: 600;">--:--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Container (hidden initially) -->
+                        <div id="backtest-results" style="display: none; margin-top: 40px;">
+                            <h4 style="color: #4ade80; margin-bottom: 20px;"> Backtest Complete</h4>
+                            <div style="padding: 25px; background: #0d1117; border-radius: 8px; border: 1px solid #30363d;">
+                                <!-- Budget Summary -->
+                                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #30363d;">
+                                    <h5 style="color: #ccd6f6; margin-bottom: 15px;">Capital Summary</h5>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Initial Capital</div>
+                                            <div id="initial-capital" style="color: #6b8cff; font-size: 18px; font-weight: 600;">$10,000</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Final Capital</div>
+                                            <div id="final-capital" style="color: #4ade80; font-size: 18px; font-weight: 600;">$0</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Total Invested</div>
+                                            <div id="total-invested" style="color: #6b8cff; font-size: 18px; font-weight: 600;">$0</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Total Trades</div>
+                                            <div id="total-trades" style="color: #6b8cff; font-size: 18px; font-weight: 600;">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Performance Metrics -->
+                                <h5 style="color: #ccd6f6; margin-bottom: 15px;">Performance Metrics</h5>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Total P&L</div>
+                                        <div id="result-pnl" style="color: #4ade80; font-size: 24px; font-weight: 600;">+$0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">% Gain</div>
+                                        <div id="result-gain" style="color: #4ade80; font-size: 24px; font-weight: 600;">+0.0%</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Win Rate</div>
+                                        <div id="result-winrate" style="color: #6b8cff; font-size: 24px; font-weight: 600;">0%</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Sharpe Ratio</div>
+                                        <div id="result-sharpe" style="color: #6b8cff; font-size: 24px; font-weight: 600;">0.00</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Max Drawdown</div>
+                                        <div id="result-drawdown" style="color: #ef4444; font-size: 24px; font-weight: 600;">0%</div>
+                                    </div>
+                                </div>
+
+                                <button onclick="exportBacktestResults()" style="margin-top: 20px; background: #1a1f3a; padding: 10px 20px; border-radius: 6px; color: #6b8cff; border: 1px solid #4a5580; cursor: pointer;">
+                                    Export Results
+                                </button>
+
+                                <!-- Trades Table -->
+                                <div style="margin-top: 30px;">
+                                    <h5 style="color: #ccd6f6; margin-bottom: 15px;">Trade History (<span id="trades-count">0</span> trades)</h5>
+                                    <div style="max-height: 500px; overflow-y: auto; border: 1px solid #30363d; border-radius: 8px;">
+                                        <table id="trades-table" style="width: 100%; border-collapse: collapse;">
+                                            <thead style="position: sticky; top: 0; background: #0d1117; z-index: 1;">
+                                                <tr style="border-bottom: 1px solid #30363d;">
+                                                    <th style="padding: 12px; text-align: left; color: #8892b0; font-size: 11px; font-weight: 600;">#</th>
+                                                    <th style="padding: 12px; text-align: left; color: #8892b0; font-size: 11px; font-weight: 600;">WHALE</th>
+                                                    <th style="padding: 12px; text-align: left; color: #8892b0; font-size: 11px; font-weight: 600;">MARKET</th>
+                                                    <th style="padding: 12px; text-align: left; color: #8892b0; font-size: 11px; font-weight: 600;">SIDE</th>
+                                                    <th style="padding: 12px; text-align: right; color: #8892b0; font-size: 11px; font-weight: 600;">ENTRY PRICE</th>
+                                                    <th style="padding: 12px; text-align: right; color: #8892b0; font-size: 11px; font-weight: 600;">POSITION</th>
+                                                    <th style="padding: 12px; text-align: right; color: #8892b0; font-size: 11px; font-weight: 600;">P&L</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="trades-tbody" style="font-size: 13px;">
+                                                <tr>
+                                                    <td colspan="7" style="padding: 40px; text-align: center; color: #8892b0;">
+                                                        Run backtest to see trades
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Backtest functions
+        function runBacktest() {
+            const startDate = document.getElementById('backtest-start').value;
+            const endDate = document.getElementById('backtest-end').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            // Hide button, show progress
+            document.getElementById('run-backtest-btn').style.display = 'none';
+            document.getElementById('backtest-progress-container').style.display = 'block';
+            document.getElementById('backtest-results').style.display = 'none';
+
+            // Start the backtest simulation
+            simulateBacktest();
+        }
+
+        async function simulateBacktest() {
+            const startDate = document.getElementById('backtest-start').value;
+            const endDate = document.getElementById('backtest-end').value;
+            const initialCapital = parseFloat(document.getElementById('backtest-capital').value) || 10000;
+            const positionSize = parseFloat(document.getElementById('backtest-position').value) || 10;
+            const daysBack = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+
+            // Show progress with a message
+            document.getElementById('backtest-status').textContent = 'Connecting to backtest API...';
+            document.getElementById('backtest-progress-bar').style.width = '10%';
+            document.getElementById('progress-text').textContent = '10%';
+
+            // Try to run real backtest via API
+            try {
+                document.getElementById('backtest-status').textContent = 'Running backtest with real whale data...';
+                document.getElementById('backtest-progress-bar').style.width = '50%';
+                document.getElementById('progress-text').textContent = '50%';
+
+                const response = await fetch('http://localhost:8000/api/backtest/run', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        starting_balance: initialCapital,
+                        max_position_usd: initialCapital * (positionSize / 100),
+                        max_daily_loss: initialCapital * 0.5,
+                        min_whale_quality: 50,
+                        position_size_pct: positionSize / 100,
+                        start_date: startDate,  // Send actual start date
+                        end_date: endDate,      // Send actual end date
+                        days_back: daysBack     // Keep for backward compatibility
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(' REAL backtest completed:', data);
+
+                    // Show completion
+                    document.getElementById('backtest-progress-bar').style.width = '100%';
+                    document.getElementById('progress-text').textContent = '100%';
+                    document.getElementById('backtest-status').textContent = 'Backtest complete!';
+
+                    // Show real results
+                    if (data.success && data.results) {
+                        showBacktestResults(data.results);
+                    } else {
+                        throw new Error(data.error || 'Backtest failed');
+                    }
+                    return;
+                } else {
+                    console.log('Backtest API returned error:', response.status);
+                    throw new Error(`API returned ${response.status}`);
+                }
+            } catch (error) {
+                console.log(' Real backtest not available, showing message:', error.message);
+                // Show error message instead of fake data
+                document.getElementById('backtest-progress-container').style.display = 'none';
+                document.getElementById('backtest-results').style.display = 'block';
+                document.getElementById('backtest-results').innerHTML = `
+                    <div style="padding: 40px; text-align: center;">
+                        <h3 style="color: #f87171; margin-bottom: 20px;"> Backtest Unavailable</h3>
+                        <p style="color: #8892b0; margin-bottom: 15px;">The backtest API is not currently available.</p>
+                        <p style="color: #8892b0;">Error: ${error.message}</p>
+                        <button onclick="location.reload()" style="margin-top: 20px; padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">
+                            Reload Page
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+        }
+
+        function showBacktestResults(apiResults = null) {
+            // Show results after a short delay
+            setTimeout(() => {
+                document.getElementById('backtest-progress-container').style.display = 'none';
+                document.getElementById('backtest-results').style.display = 'block';
+
+                // Get initial capital from input
+                const initialCapitalInput = parseFloat(document.getElementById('backtest-capital').value) || 10000;
+
+                // Use API results if available, otherwise generate mock results
+                let totalPnL, percentGain, winRate, sharpeRatio, maxDrawdown, totalTrades, totalInvested, finalCapital;
+
+                if (apiResults) {
+                    // Real results from API (nested structure)
+                    const perf = apiResults.performance || {};
+                    const stats = apiResults.statistics || {};
+                    const risk = apiResults.risk_metrics || {};
+
+                    totalPnL = perf.total_pnl || 0;
+                    const initialCapital = perf.starting_balance || initialCapitalInput;
+                    finalCapital = perf.ending_balance || (initialCapital + totalPnL);
+                    percentGain = perf.total_pnl_pct?.toFixed(1) || ((totalPnL / initialCapital) * 100).toFixed(1);
+                    winRate = stats.win_rate?.toFixed(1) || '0.0';
+                    sharpeRatio = risk.sharpe_ratio?.toFixed(2) || '0.00';
+                    maxDrawdown = risk.max_drawdown_pct?.toFixed(1) || '0.0';
+                    totalTrades = stats.total_trades || 0;
+                    totalInvested = totalTrades; // $1 per trade with infinite budget
+
+                    console.log('Using REAL backtest results:', { totalPnL, finalCapital, percentGain, winRate, sharpeRatio, maxDrawdown, totalTrades, totalInvested });
+                } else {
+                    // Mock results for simulation
+                    totalPnL = Math.random() * 20000 + 5000;
+                    const initialCapital = initialCapitalInput;
+                    finalCapital = initialCapital + totalPnL;
+                    percentGain = ((totalPnL / initialCapital) * 100).toFixed(1);
+                    winRate = (Math.random() * 20 + 60).toFixed(1);
+                    sharpeRatio = (Math.random() * 1.5 + 1).toFixed(2);
+                    maxDrawdown = (Math.random() * 10 + 5).toFixed(1);
+                    totalTrades = Math.floor(Math.random() * 500 + 100);
+                    totalInvested = initialCapital * (0.6 + Math.random() * 0.3);
+                }
+
+                // Update budget details
+                document.getElementById('initial-capital').textContent = '$' + initialCapitalInput.toLocaleString();
+                document.getElementById('final-capital').textContent = '$' + finalCapital.toLocaleString();
+                document.getElementById('final-capital').style.color = finalCapital > initialCapitalInput ? '#4ade80' : '#ef4444';
+                document.getElementById('total-invested').textContent = '$' + totalInvested.toLocaleString();
+                document.getElementById('total-trades').textContent = totalTrades.toLocaleString();
+
+                // Update performance metrics
+                const pnlPrefix = totalPnL >= 0 ? '+' : '';
+                const gainPrefix = percentGain >= 0 ? '+' : '';
+
+                document.getElementById('result-pnl').textContent = pnlPrefix + '$' + Math.abs(totalPnL).toLocaleString();
+                document.getElementById('result-pnl').style.color = totalPnL >= 0 ? '#4ade80' : '#ef4444';
+
+                document.getElementById('result-gain').textContent = gainPrefix + Math.abs(percentGain) + '%';
+                document.getElementById('result-gain').style.color = percentGain >= 0 ? '#4ade80' : '#ef4444';
+
+                document.getElementById('result-winrate').textContent = winRate + '%';
+                document.getElementById('result-sharpe').textContent = sharpeRatio;
+                document.getElementById('result-drawdown').textContent = '-' + maxDrawdown + '%';
+
+                // Populate trades table
+                const tradesData = apiResults?.trades || [];
+                document.getElementById('trades-count').textContent = tradesData.length;
+                const tbody = document.getElementById('trades-tbody');
+
+                if (tradesData.length > 0) {
+                    tbody.innerHTML = tradesData.map((trade, idx) => {
+                        const pnl = parseFloat(trade.realized_pnl || 0);
+                        const pnlColor = pnl >= 0 ? '#4ade80' : '#ef4444';
+                        const pnlPrefix = pnl >= 0 ? '+' : '';
+                        const marketTitle = (trade.market_title || 'Unknown Market').substring(0, 40) + '...';
+                        const whaleName = trade.whale_pseudonym || trade.whale_address || 'Unknown';
+
+                        return `
+                            <tr style="border-bottom: 1px solid #21262d;">
+                                <td style="padding: 12px; color: #8892b0;">${idx + 1}</td>
+                                <td style="padding: 12px; color: #ccd6f6;">${whaleName}</td>
+                                <td style="padding: 12px; color: #8892b0; max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${marketTitle}</td>
+                                <td style="padding: 12px;"><span style="color: ${trade.side === 'BUY' ? '#4ade80' : '#ef4444'}; font-weight: 600;">${trade.side || trade.outcome || 'YES'}</span></td>
+                                <td style="padding: 12px; text-align: right; color: #ccd6f6;">$${parseFloat(trade.price || 0).toFixed(2)}</td>
+                                <td style="padding: 12px; text-align: right; color: #6b8cff;">$${parseFloat(trade.position_size || 1).toFixed(2)}</td>
+                                <td style="padding: 12px; text-align: right; font-weight: 600; color: ${pnlColor};">${pnlPrefix}$${Math.abs(pnl).toFixed(2)}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; text-align: center; color: #8892b0;">No trades found</td></tr>';
+                }
+
+                // Show run button again
+                document.getElementById('run-backtest-btn').style.display = 'inline-block';
+            }, 1000);
+        }
+
+        function exportBacktestResults() {
+            alert('Exporting backtest results as CSV...');
+            // In a real implementation, this would generate and download a CSV file
+        }
+
+        async function loadSettingsTab() {
+            // Default settings
+            const defaults = {
+                display: {
+                    format: 'mini',
+                    refresh_rate: 5,
+                    show_alerts: true
+                },
+                trading: {
+                    mode: 'paper',
+                    max_position_size: 1000,
+                    enable_copy_trading: false
+                }
+            };
+
+            let settings = defaults;
+
+            try {
+                const response = await fetch('http://localhost:8890/api/settings');
+                if (response.ok) {
+                    const apiSettings = await response.json();
+                    // Merge API settings with defaults to ensure all properties exist
+                    settings = {
+                        display: { ...defaults.display, ...(apiSettings.display || {}) },
+                        trading: { ...defaults.trading, ...(apiSettings.trading || {}) }
+                    };
+                }
+            } catch (error) {
+                console.log('Using default settings', error);
+            }
+
+            // Render settings interface
+            document.getElementById('settings-tab').innerHTML = `
+                <div style="padding: 30px; max-width: 1400px; margin: 0 auto;">
+                    <h2 style="color: #ccd6f6; margin-bottom: 10px; font-size: 1.8rem;"> Settings Configuration</h2>
+                    <p style="color: #8892b0; margin-bottom: 30px;">Configure your trading system preferences and display options</p>
+
+                        <!-- Display Settings -->
+                        <div style="background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+                            <h4 style="color: #6b8cff; margin-bottom: 20px; font-size: 1.1rem;">Display Settings</h4>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: block; margin-bottom: 8px;">Display Format</label>
+                                <select id="display-format" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 300px;">
+                                    <option value="single" ${settings.display.format === 'single' ? 'selected' : ''}>Single Line - Ultra minimal</option>
+                                    <option value="status" ${settings.display.format === 'status' ? 'selected' : ''}>Status Bar - 2 lines</option>
+                                    <option value="metrics" ${settings.display.format === 'metrics' ? 'selected' : ''}>Metrics - Key numbers only</option>
+                                    <option value="ticker" ${settings.display.format === 'ticker' ? 'selected' : ''}>Ticker - Essential info</option>
+                                    <option value="grid" ${settings.display.format === 'grid' ? 'selected' : ''}>Grid - Organized metrics</option>
+                                    <option value="mini" ${settings.display.format === 'mini' ? 'selected' : ''}>Mini - Balanced view (default)</option>
+                                    <option value="compact" ${settings.display.format === 'compact' ? 'selected' : ''}>Compact - Full dashboard</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: block; margin-bottom: 8px;">Refresh Rate (seconds)</label>
+                                <input type="number" id="refresh-rate" min="1" max="60" value="${settings.display.refresh_rate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="show-alerts" ${settings.display.show_alerts ? 'checked' : ''} style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                                    <span>Show alerts and notifications</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Trading Settings -->
+                        <div style="background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 25px; margin-bottom: 25px;">
+                            <h4 style="color: #6b8cff; margin-bottom: 20px; font-size: 1.1rem;">Trading Settings</h4>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: block; margin-bottom: 8px;">Trading Mode</label>
+                                <select id="trading-mode" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 300px;">
+                                    <option value="paper" ${settings.trading.mode === 'paper' ? 'selected' : ''}>Paper Trading (Simulated)</option>
+                                    <option value="live" ${settings.trading.mode === 'live' ? 'selected' : ''}>Live Trading (Real Money)</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: block; margin-bottom: 8px;">Max Position Size ($)</label>
+                                <input type="number" id="max-position-size" min="100" max="100000" value="${settings.trading.max_position_size}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+
+                            <div style="margin-bottom: 20px;">
+                                <label style="color: #8892b0; display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="enable-copy-trading" ${settings.trading.enable_copy_trading ? 'checked' : ''} style="margin-right: 10px; width: 20px; height: 20px; cursor: pointer;">
+                                    <span>Enable automated copy trading</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div style="text-align: right;">
+                            <button onclick="saveSettings()" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 30px; border-radius: 8px; font-size: 16px; cursor: pointer; font-weight: 600; transition: all 0.3s;">
+                                Save Settings
+                            </button>
+                        </div>
+                </div>
+            `;
+        }
+
+        async function saveSettings() {
+            const settings = {
+                display: {
+                    format: document.getElementById('display-format').value,
+                    refresh_rate: parseInt(document.getElementById('refresh-rate').value),
+                    show_alerts: document.getElementById('show-alerts').checked
+                },
+                trading: {
+                    mode: document.getElementById('trading-mode').value,
+                    max_position_size: parseInt(document.getElementById('max-position-size').value),
+                    enable_copy_trading: document.getElementById('enable-copy-trading').checked
+                }
+            };
+
+            try {
+                const response = await fetch('http://localhost:8890/api/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    alert('Settings saved successfully!');
+                } else {
+                    alert('Error saving settings');
+                }
+            } catch (error) {
+                alert('Error saving settings: ' + error.message);
+            }
+        }
+
+        // Live data updates
+        async function updateLiveData() {
+            try {
+                const response = await fetch('http://localhost:8000/api/stats/summary');
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Update stats
+                    if (data.total_whales) {
+                        document.getElementById('whale-count').textContent = data.total_whales;
+                    }
+
+                    // Add more updates as needed
+                }
+            } catch (error) {
+                console.error('Error fetching live data:', error);
+            }
+        }
+
+        // WebSocket for live trades
+        function connectWebSocket() {
+            // This would connect to your WebSocket server
+            // For now, we'll simulate with periodic updates
+            setInterval(addMockTrade, 10000);
+        }
+
+        function addMockTrade() {
+            const trades = document.getElementById('live-trades');
+            const tradeTypes = ['BUY', 'SELL'];
+            const markets = [
+                'Bitcoin > $100k by EOY',
+                'ETH > $5k March 2025',
+                'Trump 2024 President',
+                'Fed Rate Cut December'
+            ];
+
+            const newTrade = document.createElement('div');
+            newTrade.className = 'trade-item';
+            const type = tradeTypes[Math.floor(Math.random() * tradeTypes.length)];
+            const market = markets[Math.floor(Math.random() * markets.length)];
+            const amount = '$' + (Math.floor(Math.random() * 10000) + 1000);
+
+            // Generate actual timestamp
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            const dateString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+            newTrade.innerHTML = `
+                <div class="trade-info">
+                    <span class="trade-type ${type.toLowerCase()}">${type}</span>
+                    <div class="trade-market">${market}</div>
+                    <div class="trade-details">Whale: 0x${Math.random().toString(16).substr(2, 4)}...${Math.random().toString(16).substr(2, 4)} • ${dateString} ${timeString}</div>
+                </div>
+                <div class="trade-amount">${amount}</div>
+            `;
+
+            trades.insertBefore(newTrade, trades.firstChild);
+
+            // Remove old trades if too many
+            while (trades.children.length > 10) {
+                trades.removeChild(trades.lastChild);
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateLiveData();
+            setInterval(updateLiveData, 10000);
+            connectWebSocket();
+
+            // Update time
+            setInterval(() => {
+                const now = new Date();
+                const timeStr = now.toTimeString().split(' ')[0];
+                const display = document.getElementById('terminal-display');
+                if (display && display.textContent.includes('WHALE TRADER')) {
+                    const lines = display.textContent.split('\n');
+                    lines[0] = `WHALE TRADER ${timeStr}`;
+                    display.textContent = lines.join('\n');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
