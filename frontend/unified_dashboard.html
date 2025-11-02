@@ -722,7 +722,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 <div class="trade-info">
                                     <span class="trade-type buy">BUY</span>
                                     <div class="trade-market">Bitcoin > $100k by EOY</div>
-                                    <div class="trade-details">Whale: 0x1234...5678 • 2 min ago</div>
+                                    <div class="trade-details">Whale: 0x1234...5678 • Nov 1 23:44:52</div>
                                 </div>
                                 <div class="trade-amount">$5,000</div>
                             </div>
@@ -730,7 +730,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 <div class="trade-info">
                                     <span class="trade-type sell">SELL</span>
                                     <div class="trade-market">Trump 2024 President</div>
-                                    <div class="trade-details">Whale: 0xabcd...ef12 • 5 min ago</div>
+                                    <div class="trade-details">Whale: 0xabcd...ef12 • Nov 1 23:41:36</div>
                                 </div>
                                 <div class="trade-amount">$2,500</div>
                             </div>
@@ -738,7 +738,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 <div class="trade-info">
                                     <span class="trade-type buy">BUY</span>
                                     <div class="trade-market">ETH > $5k March 2025</div>
-                                    <div class="trade-details">Whale: 0x9876...5432 • 8 min ago</div>
+                                    <div class="trade-details">Whale: 0x9876...5432 • Nov 1 23:38:14</div>
                                 </div>
                                 <div class="trade-amount">$8,200</div>
                             </div>
@@ -746,7 +746,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 <div class="trade-info">
                                     <span class="trade-type buy">BUY</span>
                                     <div class="trade-market">Fed Rate Cut December</div>
-                                    <div class="trade-details">Whale: 0x1234...5678 • 12 min ago</div>
+                                    <div class="trade-details">Whale: 0x1234...5678 • Nov 1 23:34:27</div>
                                 </div>
                                 <div class="trade-amount">$3,800</div>
                             </div>
@@ -1211,11 +1211,16 @@ Last: BUY BTC>100k $5K +12.5%
             const market = markets[Math.floor(Math.random() * markets.length)];
             const amount = '$' + (Math.floor(Math.random() * 10000) + 1000);
 
+            // Generate actual timestamp
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour12: false });
+            const dateString = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
             newTrade.innerHTML = `
                 <div class="trade-info">
                     <span class="trade-type ${type.toLowerCase()}">${type}</span>
                     <div class="trade-market">${market}</div>
-                    <div class="trade-details">Whale: 0x${Math.random().toString(16).substr(2, 4)}...${Math.random().toString(16).substr(2, 4)} • Just now</div>
+                    <div class="trade-details">Whale: 0x${Math.random().toString(16).substr(2, 4)}...${Math.random().toString(16).substr(2, 4)} • ${dateString} ${timeString}</div>
                 </div>
                 <div class="trade-amount">${amount}</div>
             `;
