@@ -1,5 +1,12 @@
 {
   "display": {
-    "format": "compact"
+    "format": "single",
+    "refresh_rate": 5,
+    "show_alerts": true
+  },
+  "trading": {
+    "mode": "paper",
+    "max_position_size": 1000,
+    "enable_copy_trading": true
   }
 }

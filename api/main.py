@@ -598,7 +598,9 @@ class BacktestRequest(BaseModel):
     max_daily_loss: float = 500.0
     min_whale_quality: int = 50
     position_size_pct: float = 0.05
-    days_back: int = 30  # How many days of history to test
+    days_back: int = 30  # How many days of history to test (deprecated, use start_date/end_date)
+    start_date: str = None  # ISO format date string (YYYY-MM-DD)
+    end_date: str = None    # ISO format date string (YYYY-MM-DD)
     whale_addresses: list = None  # Optional: specific whales to test
 
 
@@ -617,6 +619,16 @@ async def run_backtest(request: BacktestRequest):
         }
 
     try:
+        # Parse dates from request
+        if request.start_date and request.end_date:
+            # Use explicit start/end dates from frontend
+            start_dt = datetime.fromisoformat(request.start_date)
+            end_dt = datetime.fromisoformat(request.end_date)
+        else:
+            # Fallback to days_back for backward compatibility
+            end_dt = datetime.utcnow()
+            start_dt = end_dt - timedelta(days=request.days_back)
+
         # Create backtest config
         config = BacktestConfig(
             starting_balance=Decimal(str(request.starting_balance)),
@@ -624,7 +636,8 @@ async def run_backtest(request: BacktestRequest):
             max_daily_loss=Decimal(str(request.max_daily_loss)),
             min_whale_quality=request.min_whale_quality,
             position_size_pct=Decimal(str(request.position_size_pct)),
-            start_date=datetime.utcnow() - timedelta(days=request.days_back),
+            start_date=start_dt,
+            end_date=end_dt,
             whale_addresses=request.whale_addresses
         )
 

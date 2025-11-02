@@ -305,11 +305,7 @@ class Backtester:
         if whale_quality < self.config.min_whale_quality:
             return False
 
-        # Would need sufficient balance for minimum position
-        min_position = current_balance * Decimal('0.01')
-        if current_balance < min_position:
-            return False
-
+        # Infinite budget mode - no balance check needed
         return True
 
     def calculate_position_size(self, whale_quality: float, current_balance: Decimal) -> Decimal:
@@ -323,18 +319,8 @@ class Backtester:
         Returns:
             Position size in USD
         """
-        # Base size: percentage of balance
-        base_size = current_balance * self.config.position_size_pct
-
-        # Adjust by whale quality
-        quality_factor = Decimal(str(whale_quality)) / Decimal('100.0')
-        position = base_size * quality_factor
-
-        # Apply limits
-        position = min(position, self.config.max_position_usd)
-        position = min(position, current_balance * Decimal('0.10'))  # Max 10% of balance
-
-        return position
+        # Fixed $1 position size for all trades (infinite budget mode)
+        return Decimal('1.0')
 
     def calculate_trade_pnl(self, trade: Dict, position_size: Decimal) -> tuple[Decimal, bool]:
         """
@@ -381,11 +367,18 @@ class Backtester:
 
             if did_win:
                 # WIN: We bought at entry_price, it resolves to $1.00
-                # Shares bought = position_size / entry_price
-                # Final value = shares * $1.00
-                # P&L = final_value - position_size
-                shares = position_size / entry_price
-                final_value = shares  # Each share worth $1.00
+                # For prediction markets, profit is capped by the odds
+                # If you buy at $0.60, max profit is ($1.00 - $0.60) / $0.60 = 66.7%
+                # Polymarket shares: spending $X at price $P gives you $X worth of outcome tokens
+                # If outcome wins, tokens worth $X * (1.0 / P)
+
+                # Safety check: price must be between 0.01 and 0.99
+                safe_price = max(Decimal('0.01'), min(entry_price, Decimal('0.99')))
+
+                # Calculate payout: position_size gets you (position_size / price) shares
+                # Each winning share pays out $1.00
+                shares = position_size / safe_price
+                final_value = shares * Decimal('1.0')
                 pnl = final_value - position_size
             else:
                 # LOSS: Position goes to $0

@@ -1,8 +1,8 @@
 """
 Configuration management for Polymarket Copy Trading System
 """
-from pydantic_settings import BaseSettings
-from pydantic import Field, validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, field_validator
 from typing import List, Optional
 import os
 from pathlib import Path
@@ -10,6 +10,13 @@ from pathlib import Path
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore"  # Allow extra fields from .env without errors
+    )
 
     # Environment
     ENVIRONMENT: str = Field(default="development")
@@ -113,32 +120,30 @@ class Settings(BaseSettings):
     # Sentry
     SENTRY_DSN: Optional[str] = Field(default=None)
 
-    @validator("PRIVATE_KEY", "WALLET_ADDRESS", "POLYMARKET_API_KEY")
-    def check_required_in_production(cls, v, field):
+    @field_validator("PRIVATE_KEY", "WALLET_ADDRESS", "POLYMARKET_API_KEY")
+    @classmethod
+    def check_required_in_production(cls, v, info):
         """Ensure critical fields are set in production"""
         env = os.getenv("ENVIRONMENT", "development")
         if env == "production" and not v:
-            raise ValueError(f"{field.name} is required in production")
+            raise ValueError(f"{info.field_name} is required in production")
         return v
 
-    @validator("KELLY_FRACTION")
+    @field_validator("KELLY_FRACTION")
+    @classmethod
     def validate_kelly_fraction(cls, v):
         """Kelly fraction must be between 0 and 1"""
         if not 0 < v <= 1:
             raise ValueError("KELLY_FRACTION must be between 0 and 1")
         return v
 
-    @validator("MAX_WHALE_ALLOCATION")
+    @field_validator("MAX_WHALE_ALLOCATION")
+    @classmethod
     def validate_whale_allocation(cls, v):
         """Max whale allocation must be between 0 and 1"""
         if not 0 < v <= 1:
             raise ValueError("MAX_WHALE_ALLOCATION must be between 0 and 1")
         return v
-
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
 
 
 # Global settings instance

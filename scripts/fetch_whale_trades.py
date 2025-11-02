@@ -23,6 +23,51 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
 
+# Cache for market titles to avoid repeated API calls
+market_title_cache = {}
+
+
+def fetch_market_title(condition_id):
+    """Fetch market title from Polymarket API."""
+    # Check cache first
+    if condition_id in market_title_cache:
+        return market_title_cache[condition_id]
+
+    try:
+        # Try Gamma API first (more reliable for market info)
+        response = requests.get(
+            f"https://gamma-api.polymarket.com/markets/{condition_id}",
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            title = data.get('question') or data.get('title')
+            if title:
+                market_title_cache[condition_id] = title
+                return title
+    except:
+        pass
+
+    # Fallback: try to get from CLOB markets endpoint
+    try:
+        response = requests.get(
+            f"https://clob.polymarket.com/markets/{condition_id}",
+            timeout=5
+        )
+        if response.status_code == 200:
+            data = response.json()
+            title = data.get('question') or data.get('title') or data.get('description')
+            if title:
+                market_title_cache[condition_id] = title
+                return title
+    except:
+        pass
+
+    # Cache null result to avoid repeated failed lookups
+    market_title_cache[condition_id] = None
+    return None
+
+
 def fetch_trades_for_whale(address, limit=100):
     """Fetch recent trades for a whale from Polymarket CLOB API."""
     trades = []
@@ -84,12 +129,18 @@ def parse_trade_to_model(trade_data, trader_address):
         else:
             timestamp = datetime.utcnow()
 
+        # Fetch market title
+        market_title = None
+        if market_id and market_id != 'unknown':
+            market_title = fetch_market_title(market_id)
+
         # Create Trade object
         trade = Trade(
             trade_id=trade_id,
             trader_address=trader_address.lower(),
             market_id=market_id or 'unknown',
             token_id=token_id or 'unknown',
+            market_title=market_title,  # Add market title
             side=side,
             size=size,
             price=price,
