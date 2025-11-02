@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Polymarket Whale Trader - Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e1a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .settings-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .sidebar {
+            width: 250px;
+            background: #1a1f2e;
+            border-radius: 10px;
+            padding: 20px;
+            height: fit-content;
+        }
+
+        .sidebar-item {
+            padding: 12px 16px;
+            margin-bottom: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-item:hover {
+            background: #2a3142;
+        }
+
+        .sidebar-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-weight: bold;
+        }
+
+        .sidebar-item i {
+            width: 20px;
+        }
+
+        .content {
+            flex: 1;
+            background: #1a1f2e;
+            border-radius: 10px;
+            padding: 30px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+
+        .display-formats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .format-card {
+            background: #2a3142;
+            border: 2px solid #3a4152;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .format-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .format-card.selected {
+            border-color: #764ba2;
+            background: #353848;
+        }
+
+        .format-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #764ba2;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .format-name {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .format-lines {
+            color: #888;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .format-preview {
+            background: #0a0e1a;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .settings-group {
+            background: #2a3142;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .settings-group h3 {
+            margin-bottom: 15px;
+            color: #9ca3af;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .setting-row label {
+            flex: 1;
+        }
+
+        .toggle {
+            width: 50px;
+            height: 25px;
+            background: #3a4152;
+            border-radius: 25px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #667eea;
+        }
+
+        .toggle-slider {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2.5px;
+            left: 2.5px;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active .toggle-slider {
+            transform: translateX(25px);
+        }
+
+        input[type="number"], input[type="text"], select {
+            background: #1a1f2e;
+            border: 1px solid #3a4152;
+            padding: 8px 12px;
+            border-radius: 5px;
+            color: #e0e0e0;
+            width: 150px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .save-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: transform 0.2s;
+            float: right;
+            margin-top: 20px;
+        }
+
+        .save-button:hover {
+            transform: scale(1.05);
+        }
+
+        .preview-container {
+            background: #0a0e1a;
+            border: 2px solid #3a4152;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .preview-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #9ca3af;
+        }
+
+        .live-preview {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            white-space: pre;
+            color: #4ade80;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4ade80;
+            color: #0a0e1a;
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .status-green { background: #4ade80; }
+        .status-yellow { background: #fbbf24; }
+        .status-red { background: #ef4444; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav style="background: rgba(26, 31, 58, 0.95); padding: 0 40px; position: fixed; top: 0; left: 0; right: 0; z-index: 1000; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+        <div style="max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 15px; padding: 20px 0;">
+                <span style="font-size: 1.8rem;">🐋</span>
+                <span style="font-size: 1.4rem; font-weight: 600; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">WhaleTracker</span>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="http://localhost:8890/" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #8892b0; transition: all 0.3s;">Home</a>
+                <a href="http://localhost:8000/dashboard" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #8892b0; transition: all 0.3s;">Dashboard</a>
+                <a href="http://localhost:8000/api/whales" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #8892b0; transition: all 0.3s;">Whales</a>
+                <a href="http://localhost:8000/api/trades" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #8892b0; transition: all 0.3s;">Trades</a>
+                <a href="#" style="padding: 10px 20px; border-radius: 8px; text-decoration: none; color: #6b8cff; background: rgba(107, 140, 255, 0.15); transition: all 0.3s;">Settings</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 80px;">
+        <div class="header">
+            <h1>⚙️ Settings Configuration</h1>
+            <p>Configure your trading system preferences and display options</p>
+        </div>
+
+        <div class="settings-container">
+            <div class="sidebar">
+                <div class="sidebar-item active" data-tab="display">
+                    <i>📊</i> Display Settings
+                </div>
+                <div class="sidebar-item" data-tab="trading">
+                    <i>💹</i> Trading Settings
+                </div>
+                <div class="sidebar-item" data-tab="risk">
+                    <i>⚠️</i> Risk Management
+                </div>
+                <div class="sidebar-item" data-tab="whales">
+                    <i>🐋</i> Whale Selection
+                </div>
+                <div class="sidebar-item" data-tab="alerts">
+                    <i>🔔</i> Notifications
+                </div>
+                <div class="sidebar-item" data-tab="api">
+                    <i>🔌</i> API Config
+                </div>
+                <div class="sidebar-item" data-tab="database">
+                    <i>💾</i> Database
+                </div>
+            </div>
+
+            <div class="content">
+                <!-- Display Settings Tab -->
+                <div class="tab-content active" id="display-tab">
+                    <h2 class="section-title">Display Settings</h2>
+
+                    <h3 style="margin-bottom: 15px;">Select Display Format</h3>
+                    <div class="display-formats">
+                        <div class="format-card" data-format="single">
+                            <div class="format-name">Single Line</div>
+                            <div class="format-lines">1 line - Ultra minimal</div>
+                            <div class="format-preview">WHALE TRADER | P&L:+$8.5K Win:73% Sharpe:2.34 | 🟢</div>
+                        </div>
+
+                        <div class="format-card" data-format="status">
+                            <div class="format-name">Status Bar</div>
+                            <div class="format-lines">2 lines - Minimal status</div>
+                            <div class="format-preview">WHALE TRADER │ P&L:+$8.5K Win:73%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+                        </div>
+
+                        <div class="format-card" data-format="metrics">
+                            <div class="format-name">Metrics</div>
+                            <div class="format-lines">4 lines - Key numbers</div>
+                            <div class="format-preview">P&L:+$8.5K │ Win:73% │ Sharpe:2.34
+Whales:25  │ Signals:145/d │ VaR:12%
+Volume:$125K │ Trades:1456
+Last: BUY BTC>100k +12.5%</div>
+                        </div>
+
+                        <div class="format-card" data-format="ticker">
+                            <div class="format-name">Ticker</div>
+                            <div class="format-lines">5 lines - Essential info</div>
+                            <div class="format-preview">══ WHALE TRADER ══
+P&L:+$8.5K Win:73% Sharpe:2.34
+Whales:25 Signals:145 Trades:1456
+Last: BUY BTC>100k $5K +12.5%
+Systems: DB:🟢 API:🟢 WS:🟢</div>
+                        </div>
+
+                        <div class="format-card" data-format="grid">
+                            <div class="format-name">Grid</div>
+                            <div class="format-lines">8 lines - Organized view</div>
+                            <div class="format-preview">WHALE TRADER  22:30:45
+┌─────────────┬─────────────┬─────────────┐
+│ P&L: +$8.5K │ Win: 73%    │ Sharpe: 2.34│
+│ DD: 8%      │ VaR: 12%    │ Trades: 1456│
+│ Whales: 25  │ Signals:145 │ Exp: $45K   │
+└─────────────┴─────────────┴─────────────┘
+Last: BUY BTC>100k $5K +12.5%
+Status: 🟢 🟢 🟢 🟢 🟡</div>
+                        </div>
+
+                        <div class="format-card selected" data-format="mini">
+                            <div class="format-name">Mini</div>
+                            <div class="format-lines">10 lines - Balanced view</div>
+                            <div class="format-preview">WHALE TRADER 22:30:45
+DB:🟢 API:🟢 WS:🟢 Engine:🟢 Monitor:🟡
+Trades:1456 Win:73% P&L:+$8.5K
+Whales:25 Signals:145 Exposure:$45K
+Last: BUY BTC>100k $5K +12.5%
+⚠ Loss limit 8.5%
+[Q]uit [R]efresh</div>
+                        </div>
+
+                        <div class="format-card" data-format="compact">
+                            <div class="format-name">Compact</div>
+                            <div class="format-lines">15 lines - Full dashboard</div>
+                            <div class="format-preview">POLYMARKET WHALE TRADER - 22:30:45
+────────────────────────────────────
+Status: DB:🟢 API:🟢 WS:🟢 Engine:🟢
+
+Performance:
+  Trades:1456 WinRate:73% Vol:$125K
+  Sharpe:2.34 DD:8% VaR:12%
+
+Recent:
+  BUY  0x1234→BTC>100k    $5K  +12.5%
+  SELL 0x5678→Trump2024   $2.5K -3.2%
+
+Alert: ⚠ Approaching daily loss limit
+
+[Q]uit [R]efresh [D]etails</div>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Display Preferences</h3>
+                        <div class="setting-row">
+                            <label>Refresh Rate (seconds)</label>
+                            <input type="range" id="refresh-rate" min="1" max="60" value="5">
+                            <span id="refresh-value">5s</span>
+                        </div>
+                        <div class="setting-row">
+                            <label>Show Alerts</label>
+                            <div class="toggle active" id="show-alerts">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Show Emojis</label>
+                            <div class="toggle active" id="show-emojis">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Enable Colors</label>
+                            <div class="toggle" id="enable-colors">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Terminal Width</label>
+                            <input type="number" id="terminal-width" value="80" min="40" max="200">
+                        </div>
+                    </div>
+
+                    <div class="preview-container">
+                        <div class="preview-title">Live Preview</div>
+                        <div class="live-preview" id="live-preview">WHALE TRADER 22:30:45
+DB:🟢 API:🟢 WS:🟢 Engine:🟢 Monitor:🟡
+Trades:1456 Win:73% P&L:+$8.5K Sharpe:2.34
+Whales:25 Signals:145 Exposure:$45K DD:8%
+Last: BUY BTC>100k $5K +12.5%
+⚠ Loss limit 8.5%
+[Q]uit [R]efresh</div>
+                    </div>
+                </div>
+
+                <!-- Trading Settings Tab -->
+                <div class="tab-content" id="trading-tab">
+                    <h2 class="section-title">Trading Settings</h2>
+
+                    <div class="settings-group">
+                        <h3>Trading Configuration</h3>
+                        <div class="setting-row">
+                            <label>Trading Mode</label>
+                            <select id="trading-mode">
+                                <option value="paper" selected>Paper Trading</option>
+                                <option value="live">Live Trading</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>Max Position Size ($)</label>
+                            <input type="number" id="max-position" value="1000" min="100" max="100000">
+                        </div>
+                        <div class="setting-row">
+                            <label>Max Daily Trades</label>
+                            <input type="number" id="max-trades" value="50" min="1" max="1000">
+                        </div>
+                        <div class="setting-row">
+                            <label>Stop Loss (%)</label>
+                            <input type="number" id="stop-loss" value="10" min="1" max="50">
+                        </div>
+                        <div class="setting-row">
+                            <label>Take Profit (%)</label>
+                            <input type="number" id="take-profit" value="20" min="1" max="200">
+                        </div>
+                        <div class="setting-row">
+                            <label>Enable Copy Trading</label>
+                            <div class="toggle" id="copy-trading">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Management Tab -->
+                <div class="tab-content" id="risk-tab">
+                    <h2 class="section-title">Risk Management</h2>
+
+                    <div class="settings-group">
+                        <h3>Risk Parameters</h3>
+                        <div class="setting-row">
+                            <label>Max Drawdown (%)</label>
+                            <input type="number" id="max-drawdown" value="15" min="5" max="50">
+                        </div>
+                        <div class="setting-row">
+                            <label>Position Sizing</label>
+                            <select id="position-sizing">
+                                <option value="fixed">Fixed</option>
+                                <option value="kelly" selected>Kelly Criterion</option>
+                                <option value="risk_parity">Risk Parity</option>
+                            </select>
+                        </div>
+                        <div class="setting-row">
+                            <label>Kelly Fraction</label>
+                            <input type="number" id="kelly-fraction" value="0.25" min="0.1" max="1.0" step="0.05">
+                        </div>
+                        <div class="setting-row">
+                            <label>VaR Confidence (%)</label>
+                            <input type="number" id="var-confidence" value="95" min="90" max="99">
+                        </div>
+                        <div class="setting-row">
+                            <label>Max Correlation</label>
+                            <input type="number" id="max-correlation" value="0.7" min="0.1" max="1.0" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Whale Selection Tab -->
+                <div class="tab-content" id="whales-tab">
+                    <h2 class="section-title">Whale Selection Criteria</h2>
+
+                    <div class="settings-group">
+                        <h3>Whale Filters</h3>
+                        <div class="setting-row">
+                            <label>Min WQS Score</label>
+                            <input type="number" id="min-wqs" value="0.7" min="0.1" max="1.0" step="0.1">
+                        </div>
+                        <div class="setting-row">
+                            <label>Min Sharpe Ratio</label>
+                            <input type="number" id="min-sharpe" value="1.5" min="0.5" max="5.0" step="0.1">
+                        </div>
+                        <div class="setting-row">
+                            <label>Min Win Rate (%)</label>
+                            <input type="number" id="min-winrate" value="60" min="40" max="90">
+                        </div>
+                        <div class="setting-row">
+                            <label>Max Whales to Follow</label>
+                            <input type="number" id="max-whales" value="10" min="1" max="50">
+                        </div>
+                        <div class="setting-row">
+                            <label>Update Frequency (seconds)</label>
+                            <input type="number" id="whale-update" value="3600" min="60" max="86400">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts Tab -->
+                <div class="tab-content" id="alerts-tab">
+                    <h2 class="section-title">Notification Settings</h2>
+
+                    <div class="settings-group">
+                        <h3>Discord</h3>
+                        <div class="setting-row">
+                            <label>Enable Discord</label>
+                            <div class="toggle" id="discord-enable">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Webhook URL</label>
+                            <input type="text" id="discord-webhook" placeholder="https://discord.com/api/webhooks/...">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Telegram</h3>
+                        <div class="setting-row">
+                            <label>Enable Telegram</label>
+                            <div class="toggle" id="telegram-enable">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Bot Token</label>
+                            <input type="text" id="telegram-token" placeholder="Bot token">
+                        </div>
+                        <div class="setting-row">
+                            <label>Chat ID</label>
+                            <input type="text" id="telegram-chat" placeholder="Chat ID">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Alert Triggers</h3>
+                        <div class="setting-row">
+                            <label>Alert on Trade</label>
+                            <div class="toggle active" id="alert-trade">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Alert on Error</label>
+                            <div class="toggle active" id="alert-error">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                        <div class="setting-row">
+                            <label>Alert on Drawdown</label>
+                            <div class="toggle active" id="alert-drawdown">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Config Tab -->
+                <div class="tab-content" id="api-tab">
+                    <h2 class="section-title">API Configuration</h2>
+
+                    <div class="settings-group">
+                        <h3>Endpoints</h3>
+                        <div class="setting-row">
+                            <label>Polymarket API</label>
+                            <input type="text" id="polymarket-api" value="https://gamma-api.polymarket.com">
+                        </div>
+                        <div class="setting-row">
+                            <label>Graph API</label>
+                            <input type="text" id="graph-api" value="https://api.thegraph.com">
+                        </div>
+                        <div class="setting-row">
+                            <label>WebSocket URL</label>
+                            <input type="text" id="ws-url" value="wss://ws-subscriptions-clob.polymarket.com/ws/market">
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3>Rate Limiting</h3>
+                        <div class="setting-row">
+                            <label>Rate Limit (req/min)</label>
+                            <input type="number" id="rate-limit" value="100" min="10" max="1000">
+                        </div>
+                        <div class="setting-row">
+                            <label>Timeout (seconds)</label>
+                            <input type="number" id="timeout" value="30" min="5" max="120">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Tab -->
+                <div class="tab-content" id="database-tab">
+                    <h2 class="section-title">Database Settings</h2>
+
+                    <div class="settings-group">
+                        <h3>Connection</h3>
+                        <div class="setting-row">
+                            <label>Host</label>
+                            <input type="text" id="db-host" value="localhost">
+                        </div>
+                        <div class="setting-row">
+                            <label>Port</label>
+                            <input type="number" id="db-port" value="5432">
+                        </div>
+                        <div class="setting-row">
+                            <label>Database Name</label>
+                            <input type="text" id="db-name" value="polymarket_trader">
+                        </div>
+                        <div class="setting-row">
+                            <label>Username</label>
+                            <input type="text" id="db-user" value="trader">
+                        </div>
+                        <div class="setting-row">
+                            <label>Password</label>
+                            <input type="password" id="db-password" value="trader_password">
+                        </div>
+                    </div>
+                </div>
+
+                <button class="save-button" onclick="saveSettings()">💾 Save Settings</button>
+                <div style="clear: both;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">
+        Settings saved successfully!
+    </div>
+
+    <script>
+        // Tab switching
+        document.querySelectorAll('.sidebar-item').forEach(item => {
+            item.addEventListener('click', function() {
+                // Remove active class from all items
+                document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+                // Add active class to clicked item
+                this.classList.add('active');
+                const tabId = this.dataset.tab + '-tab';
+                document.getElementById(tabId).classList.add('active');
+            });
+        });
+
+        // Display format selection
+        document.querySelectorAll('.format-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+                updateLivePreview(this.dataset.format);
+            });
+        });
+
+        // Toggle switches
+        document.querySelectorAll('.toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // Refresh rate slider
+        const refreshSlider = document.getElementById('refresh-rate');
+        const refreshValue = document.getElementById('refresh-value');
+        refreshSlider.addEventListener('input', function() {
+            refreshValue.textContent = this.value + 's';
+        });
+
+        // Update live preview based on selected format
+        function updateLivePreview(format) {
+            const previewElement = document.getElementById('live-preview');
+            const previews = {
+                'single': 'WHALE TRADER | P&L:+$8.5K Win:73% Sharpe:2.34 | 🟢',
+                'status': 'WHALE TRADER │ P&L:+$8.5K Win:73%\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+                'metrics': 'P&L:+$8.5K │ Win:73% │ Sharpe:2.34\nWhales:25  │ Signals:145/d │ VaR:12%\nVolume:$125K │ Trades:1456\nLast: BUY BTC>100k +12.5%',
+                'ticker': '══ WHALE TRADER ══\nP&L:+$8.5K Win:73% Sharpe:2.34\nWhales:25 Signals:145 Trades:1456\nLast: BUY BTC>100k $5K +12.5%\nSystems: DB:🟢 API:🟢 WS:🟢',
+                'grid': 'WHALE TRADER  22:30:45\n┌─────────────┬─────────────┬─────────────┐\n│ P&L: +$8.5K │ Win: 73%    │ Sharpe: 2.34│\n│ DD: 8%      │ VaR: 12%    │ Trades: 1456│\n│ Whales: 25  │ Signals:145 │ Exp: $45K   │\n└─────────────┴─────────────┴─────────────┘\nLast: BUY BTC>100k $5K +12.5%\nStatus: 🟢 🟢 🟢 🟢 🟡',
+                'mini': 'WHALE TRADER 22:30:45\nDB:🟢 API:🟢 WS:🟢 Engine:🟢 Monitor:🟡\nTrades:1456 Win:73% P&L:+$8.5K Sharpe:2.34\nWhales:25 Signals:145 Exposure:$45K DD:8%\nLast: BUY BTC>100k $5K +12.5%\n⚠ Loss limit 8.5%\n[Q]uit [R]efresh',
+                'compact': 'POLYMARKET WHALE TRADER - 22:30:45\n────────────────────────────────────\nStatus: DB:🟢 API:🟢 WS:🟢 Engine:🟢\n\nPerformance:\n  Trades:1456 WinRate:73% Vol:$125K\n  Sharpe:2.34 DD:8% VaR:12%\n\nRecent:\n  BUY  0x1234→BTC>100k    $5K  +12.5%\n  SELL 0x5678→Trump2024   $2.5K -3.2%\n\nAlert: ⚠ Approaching daily loss limit\n\n[Q]uit [R]efresh [D]etails'
+            };
+            previewElement.textContent = previews[format] || previews['mini'];
+        }
+
+        // Save settings function
+        function saveSettings() {
+            // Collect all settings
+            const settings = {
+                display: {
+                    format: document.querySelector('.format-card.selected').dataset.format,
+                    refresh_rate: parseInt(document.getElementById('refresh-rate').value),
+                    show_alerts: document.getElementById('show-alerts').classList.contains('active'),
+                    show_emojis: document.getElementById('show-emojis').classList.contains('active'),
+                    enable_colors: document.getElementById('enable-colors').classList.contains('active'),
+                    terminal_width: parseInt(document.getElementById('terminal-width').value)
+                },
+                trading: {
+                    mode: document.getElementById('trading-mode').value,
+                    max_position_size: parseFloat(document.getElementById('max-position').value),
+                    max_daily_trades: parseInt(document.getElementById('max-trades').value),
+                    stop_loss_percent: parseFloat(document.getElementById('stop-loss').value),
+                    take_profit_percent: parseFloat(document.getElementById('take-profit').value),
+                    enable_copy_trading: document.getElementById('copy-trading').classList.contains('active')
+                },
+                risk: {
+                    max_drawdown: parseFloat(document.getElementById('max-drawdown').value),
+                    position_sizing: document.getElementById('position-sizing').value,
+                    kelly_fraction: parseFloat(document.getElementById('kelly-fraction').value),
+                    var_confidence: parseFloat(document.getElementById('var-confidence').value),
+                    max_correlation: parseFloat(document.getElementById('max-correlation').value)
+                },
+                whales: {
+                    min_wqs_score: parseFloat(document.getElementById('min-wqs').value),
+                    min_sharpe_ratio: parseFloat(document.getElementById('min-sharpe').value),
+                    min_win_rate: parseFloat(document.getElementById('min-winrate').value) / 100,
+                    max_whales_to_follow: parseInt(document.getElementById('max-whales').value),
+                    update_frequency: parseInt(document.getElementById('whale-update').value)
+                }
+            };
+
+            // Send to backend (placeholder)
+            console.log('Saving settings:', settings);
+
+            // Show notification
+            const notification = document.getElementById('notification');
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+
+            // Send to backend
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            }).catch(err => console.error('Error saving settings:', err));
+        }
+
+        // Load settings on page load
+        window.addEventListener('load', function() {
+            // Fetch from backend
+            fetch('/api/settings')
+                .then(res => res.json())
+                .then(settings => {
+                    // Load display settings
+                    if (settings.display) {
+                        // Set selected format
+                        document.querySelectorAll('.format-card').forEach(card => {
+                            card.classList.remove('selected');
+                            if (card.dataset.format === settings.display.format) {
+                                card.classList.add('selected');
+                            }
+                        });
+
+                        // Set display preferences
+                        if (settings.display.refresh_rate) {
+                            document.getElementById('refresh-rate').value = settings.display.refresh_rate;
+                            document.getElementById('refresh-value').textContent = settings.display.refresh_rate + 's';
+                        }
+
+                        // Set toggles
+                        document.getElementById('show-alerts').classList.toggle('active', settings.display.show_alerts);
+                        document.getElementById('show-emojis').classList.toggle('active', settings.display.show_emojis);
+                        document.getElementById('enable-colors').classList.toggle('active', settings.display.color_enabled || false);
+
+                        if (settings.display.terminal_width) {
+                            document.getElementById('terminal-width').value = settings.display.terminal_width;
+                        }
+                    }
+                })
+                .catch(err => console.error('Error loading settings:', err));
+        });
+    </script>
+</body>
+</html>

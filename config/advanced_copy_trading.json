@@ -1,0 +1,88 @@
+{
+  "initial_capital": 10000,
+  "min_wqs_score": 75,
+  "monitoring_interval_seconds": 300,
+
+  "signal_filters": {
+    "whale_filter": {
+      "min_wqs": 75,
+      "momentum_lookback_days": 90,
+      "max_whale_drawdown": 0.25
+    },
+    "trade_filter": {
+      "min_trade_size_usd": 5000,
+      "max_slippage_pct": 0.01,
+      "max_time_to_resolution_days": 90,
+      "min_edge_pct": 0.03
+    },
+    "portfolio_filter": {
+      "max_correlation": 0.4,
+      "max_total_exposure_pct": 0.95,
+      "max_sector_concentration_pct": 0.30
+    }
+  },
+
+  "position_sizing": {
+    "kelly_fraction": 0.25,
+    "max_position_pct": 0.25,
+    "min_position_pct": 0.01,
+    "confidence_threshold": 50,
+    "volatility_lookback_days": 30,
+    "regime_lookback_days": 60,
+    "diversification_benefit": 0.15
+  },
+
+  "risk_management": {
+    "confidence_levels": [0.95, 0.99],
+    "max_daily_var": 0.02,
+    "stop_loss_pct": 0.05,
+    "take_profit_pct": 0.15,
+    "lookback_days": 252,
+    "min_observations": 30,
+    "ewma_lambda": 0.94,
+    "stress_scenarios": true,
+    "monte_carlo_simulations": 10000
+  },
+
+  "regime_detection": {
+    "ewma_lambda": 0.94,
+    "lookback_days": 60,
+    "vol_percentiles": {
+      "low": 25,
+      "high": 75,
+      "extreme": 90
+    },
+    "trend_threshold": 0.02,
+    "min_observations": 20,
+    "structural_break_confidence": 0.95
+  },
+
+  "performance_targets": {
+    "target_sharpe_ratio": 2.07,
+    "max_drawdown": 0.112,
+    "target_win_rate": 0.582,
+    "target_annual_return": 0.31,
+    "target_calmar_ratio": 2.77
+  },
+
+  "whale_tiers": {
+    "god": {
+      "min_wqs": 90,
+      "copy_percentage": 100,
+      "max_position_size_usd": 2000,
+      "priority": 1
+    },
+    "elite": {
+      "min_wqs": 80,
+      "copy_percentage": 75,
+      "max_position_size_usd": 1500,
+      "priority": 2
+    },
+    "quality": {
+      "min_wqs": 75,
+      "copy_percentage": 50,
+      "max_position_size_usd": 1000,
+      "priority": 3
+    }
+  }
+}

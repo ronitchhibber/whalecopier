@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhaleTracker - Settings with Display Format</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+
+        .header {
+            padding: 40px;
+            background: transparent;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            color: white;
+            font-weight: 300;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.8);
+            font-size: 1.1rem;
+        }
+
+        .status-indicator {
+            float: right;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator .dot {
+            width: 10px;
+            height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .navigation {
+            background: rgba(26, 31, 58, 0.95);
+            padding: 0 40px;
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-item {
+            padding: 20px 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+            color: #8892b0;
+        }
+
+        .nav-item:hover {
+            color: #ccd6f6;
+        }
+
+        .nav-item.active {
+            color: #6b8cff;
+            border-bottom-color: #6b8cff;
+        }
+
+        .content {
+            padding: 40px;
+            background: #0d1117;
+            min-height: calc(100vh - 200px);
+        }
+
+        .settings-title {
+            color: #6b8cff;
+            font-size: 2rem;
+            margin-bottom: 30px;
+            font-weight: 400;
+        }
+
+        /* Tabs within settings */
+        .settings-tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #2a3155;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            color: #8892b0;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+
+        .tab-btn:hover {
+            background: rgba(107, 140, 255, 0.1);
+            color: #ccd6f6;
+        }
+
+        .tab-btn.active {
+            background: rgba(107, 140, 255, 0.2);
+            color: #6b8cff;
+        }
+
+        .settings-section {
+            background: #252b4d;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            border: 1px solid #2a3155;
+        }
+
+        .section-title {
+            color: #6b8cff;
+            font-size: 1.2rem;
+            margin-bottom: 25px;
+        }
+
+        /* Display Format Cards */
+        .format-selector {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .format-card {
+            background: #1a1f3a;
+            border: 2px solid #2a3155;
+            border-radius: 10px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .format-card:hover {
+            border-color: #4a5580;
+            transform: translateY(-2px);
+        }
+
+        .format-card.selected {
+            border-color: #6b8cff;
+            background: rgba(107, 140, 255, 0.1);
+        }
+
+        .format-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #6b8cff;
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .format-name {
+            color: #ccd6f6;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .format-lines {
+            color: #8892b0;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .format-preview {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 9px;
+            color: #4ade80;
+            height: 60px;
+            overflow: hidden;
+            line-height: 1.2;
+        }
+
+        /* Form inputs matching original style */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            color: #8892b0;
+            margin-bottom: 10px;
+            display: block;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            background: #1a1f3a;
+            border: 1px solid #4a5580;
+            border-radius: 8px;
+            padding: 12px 15px;
+            color: #ccd6f6;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #6b8cff;
+            box-shadow: 0 0 0 3px rgba(107, 140, 255, 0.1);
+        }
+
+        .settings-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid rgba(42, 49, 85, 0.3);
+        }
+
+        .toggle-group label {
+            color: #ccd6f6;
+        }
+
+        .toggle {
+            width: 48px;
+            height: 24px;
+            background: #2a3155;
+            border-radius: 24px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle.active {
+            background: #6b8cff;
+        }
+
+        .toggle-slider {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle.active .toggle-slider {
+            transform: translateX(24px);
+        }
+
+        .time-display {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            text-align: right;
+        }
+
+        .time-display .time {
+            font-size: 1.5rem;
+            color: white;
+            font-weight: 300;
+        }
+
+        .time-display .timezone {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="status-indicator">
+            Live Trading <div class="dot"></div>
+        </div>
+        <div class="time-display">
+            <div class="time">10:53:13 PM</div>
+            <div class="timezone">Pacific Time (PST)</div>
+        </div>
+        <h1>WhaleTracker</h1>
+        <p>Real-time monitoring and copy trading for Polymarket whales</p>
+    </div>
+
+    <div class="navigation">
+        <div class="nav-item">Whales</div>
+        <div class="nav-item">Live Trades</div>
+        <div class="nav-item">Trading</div>
+        <div class="nav-item">Backtest</div>
+        <div class="nav-item">Methodology</div>
+        <div class="nav-item active">Settings</div>
+    </div>
+
+    <div class="content">
+        <h2 class="settings-title">Trading Settings</h2>
+
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+            <button class="tab-btn active">Display Format</button>
+            <button class="tab-btn">Paper Trading</button>
+            <button class="tab-btn">Risk Management</button>
+            <button class="tab-btn">Whale Filters</button>
+            <button class="tab-btn">Notifications</button>
+        </div>
+
+        <!-- Display Format Section -->
+        <div class="settings-section">
+            <h3 class="section-title">Terminal Display Format</h3>
+
+            <div class="format-selector">
+                <div class="format-card">
+                    <div class="format-name">Single Line</div>
+                    <div class="format-lines">1 line</div>
+                    <div class="format-preview">WHALE|P&L:+$8.5K|73%|🟢</div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-name">Status Bar</div>
+                    <div class="format-lines">2 lines</div>
+                    <div class="format-preview">WHALE │ P&L:+$8.5K
+━━━━━━━━━━━━━━━━━</div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-name">Metrics</div>
+                    <div class="format-lines">4 lines</div>
+                    <div class="format-preview">P&L:+$8.5K│Win:73%
+Whales:25│Signals:145</div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-name">Ticker</div>
+                    <div class="format-lines">5 lines</div>
+                    <div class="format-preview">══WHALE TRADER══
+P&L:+$8.5K Win:73%</div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-name">Grid</div>
+                    <div class="format-lines">8 lines</div>
+                    <div class="format-preview">┌────┬────┬────┐
+│P&L │Win │Shp │</div>
+                </div>
+
+                <div class="format-card selected">
+                    <div class="format-name">Mini</div>
+                    <div class="format-lines">10 lines</div>
+                    <div class="format-preview">WHALE TRADER
+DB:🟢 API:🟢 WS:🟢</div>
+                </div>
+
+                <div class="format-card">
+                    <div class="format-name">Compact</div>
+                    <div class="format-lines">15 lines</div>
+                    <div class="format-preview">POLYMARKET WHALE
+Status: All Systems</div>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <label>Show Alerts in Terminal</label>
+                <div class="toggle active">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <label>Enable Emoji Indicators</label>
+                <div class="toggle active">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+
+            <div class="toggle-group">
+                <label>Use Colors in Output</label>
+                <div class="toggle">
+                    <div class="toggle-slider"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Paper Trading Section (existing) -->
+        <div class="settings-section">
+            <h3 class="section-title">Paper Trading</h3>
+
+            <div class="form-group">
+                <label class="form-label">Initial Balance ($)</label>
+                <input type="number" value="10000">
+            </div>
+
+            <div class="settings-row">
+                <div class="form-group">
+                    <label class="form-label">Base Position Size (%)</label>
+                    <input type="number" value="5">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Max Position Size (%)</label>
+                    <input type="number" value="10">
+                </div>
+            </div>
+
+            <div class="settings-row">
+                <div class="form-group">
+                    <label class="form-label">Kelly Fraction</label>
+                    <input type="number" value="0.25" step="0.05">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Min Quality Score to Copy</label>
+                    <input type="number" value="50">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Add interactivity
+        document.querySelectorAll('.format-card').forEach(card => {
+            card.addEventListener('click', function() {
+                document.querySelectorAll('.format-card').forEach(c => c.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        document.querySelectorAll('.toggle').forEach(toggle => {
+            toggle.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "display": {
+    "format": "single",
+    "refresh_rate": 5,
+    "show_alerts": true,
+    "show_emojis": true,
+    "enable_colors": false,
+    "terminal_width": 80
+  },
+  "trading": {
+    "mode": "paper",
+    "max_position_size": 1000,
+    "max_daily_trades": 50,
+    "stop_loss_percent": 10,
+    "take_profit_percent": 20,
+    "enable_copy_trading": false
+  },
+  "risk": {
+    "max_drawdown": 15,
+    "position_sizing": "kelly",
+    "kelly_fraction": 0.25,
+    "var_confidence": 95,
+    "max_correlation": 0.7
+  },
+  "whales": {
+    "min_wqs_score": 0.7,
+    "min_sharpe_ratio": 1.5,
+    "min_win_rate": 0.6,
+    "max_whales_to_follow": 10,
+    "update_frequency": 3600
+  }
+}
