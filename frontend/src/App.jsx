@@ -41,7 +41,11 @@ export default function App() {
             </h1>
             <div className="flex gap-4">
               {['dashboard', 'whales', 'trades'].map((tab) => (
-                <button key={tab} onClick={() => setActiveTab(tab)} className={\`px-4 py-2 rounded-lg font-medium transition-all \${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'}\`}>
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'}`}
+                >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
               ))}
@@ -56,13 +60,13 @@ export default function App() {
             {[
               { label: 'Total Whales', value: stats?.total_whales, color: 'blue' },
               { label: '24h Trades', value: stats?.trades_24h, color: 'green' },
-              { label: '24h Volume', value: \`$\${stats?.volume_24h?.toLocaleString()}\`, color: 'purple' },
-              { label: 'Paper Balance', value: \`$\${stats?.paper_balance?.toLocaleString()}\`, color: 'yellow' },
-              { label: 'Paper P&L', value: \`$\${stats?.paper_pnl?.toLocaleString()}\`, color: stats?.paper_pnl >= 0 ? 'green' : 'red' },
+              { label: '24h Volume', value: `$${stats?.volume_24h?.toLocaleString()}`, color: 'purple' },
+              { label: 'Paper Balance', value: `$${stats?.paper_balance?.toLocaleString()}`, color: 'yellow' },
+              { label: 'Paper P&L', value: `$${stats?.paper_pnl?.toLocaleString()}`, color: stats?.paper_pnl >= 0 ? 'green' : 'red' },
             ].map((stat) => (
               <div key={stat.label} className="bg-gray-800/50 backdrop-blur-lg rounded-xl p-6 border border-gray-700">
                 <div className="text-gray-400 text-sm mb-2">{stat.label}</div>
-                <div className={\`text-3xl font-bold text-\${stat.color}-400\`}>{stat.value}</div>
+                <div className={`text-3xl font-bold text-${stat.color}-400`}>{stat.value}</div>
               </div>
             ))}
           </div>
@@ -70,23 +74,38 @@ export default function App() {
 
         {activeTab === 'whales' && (
           <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700 overflow-hidden">
-            <div className="p-6 border-b border-gray-700"><h2 className="text-2xl font-bold">Top Whales</h2></div>
+            <div className="p-6 border-b border-gray-700">
+              <h2 className="text-2xl font-bold">Top Whales</h2>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-700/50">
-                  <tr>{['Whale', 'Tier', 'Win Rate', 'Sharpe', 'Total P&L', 'Volume', 'Trades'].map((header) => (<th key={header} className="px-6 py-4 text-left text-sm font-semibold text-gray-300">{header}</th>))}</tr>
+                  <tr>
+                    {['Whale', 'Tier', 'Win Rate', 'Sharpe', 'Total P&L', 'Volume', 'Trades'].map((header) => (
+                      <th key={header} className="px-6 py-4 text-left text-sm font-semibold text-gray-300">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {whales.map((whale) => (
                     <tr key={whale.address} className="hover:bg-gray-700/30 transition-colors">
                       <td className="px-6 py-4">
-                        <div><div className="font-medium text-white">{whale.pseudonym}</div><div className="text-xs text-gray-400">{whale.address.slice(0, 10)}...</div></div>
+                        <div>
+                          <div className="font-medium text-white">{whale.pseudonym}</div>
+                          <div className="text-xs text-gray-400">{whale.address.slice(0, 10)}...</div>
+                        </div>
                       </td>
-                      <td className="px-6 py-4"><span className={\`px-3 py-1 rounded-full text-xs font-bold \${whale.tier === 'MEGA' ? 'bg-purple-500/20 text-purple-300' : whale.tier === 'HIGH' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}\`}>{whale.tier}</span></td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${whale.tier === 'MEGA' ? 'bg-purple-500/20 text-purple-300' : whale.tier === 'HIGH' ? 'bg-blue-500/20 text-blue-300' : 'bg-green-500/20 text-green-300'}`}>
+                          {whale.tier}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-green-400 font-medium">{whale.win_rate}%</td>
                       <td className="px-6 py-4 text-blue-400 font-medium">{whale.sharpe_ratio}</td>
-                      <td className="px-6 py-4 text-yellow-400 font-bold">\${whale.total_pnl.toLocaleString()}</td>
-                      <td className="px-6 py-4 text-gray-300">\${whale.total_volume.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-yellow-400 font-bold">${whale.total_pnl.toLocaleString()}</td>
+                      <td className="px-6 py-4 text-gray-300">${whale.total_volume.toLocaleString()}</td>
                       <td className="px-6 py-4 text-gray-300">{whale.total_trades}</td>
                     </tr>
                   ))}
@@ -98,21 +117,35 @@ export default function App() {
 
         {activeTab === 'trades' && (
           <div className="bg-gray-800/50 backdrop-blur-lg rounded-xl border border-gray-700 overflow-hidden">
-            <div className="p-6 border-b border-gray-700"><h2 className="text-2xl font-bold">Recent Trades</h2></div>
+            <div className="p-6 border-b border-gray-700">
+              <h2 className="text-2xl font-bold">Recent Trades</h2>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-700/50">
-                  <tr>{['Time', 'Whale', 'Side', 'Size', 'Price', 'Amount'].map((header) => (<th key={header} className="px-6 py-4 text-left text-sm font-semibold text-gray-300">{header}</th>))}</tr>
+                  <tr>
+                    {['Time', 'Whale', 'Side', 'Size', 'Price', 'Amount'].map((header) => (
+                      <th key={header} className="px-6 py-4 text-left text-sm font-semibold text-gray-300">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {trades.map((trade) => (
                     <tr key={trade.id} className="hover:bg-gray-700/30 transition-colors">
                       <td className="px-6 py-4 text-gray-400 text-sm">{new Date(trade.timestamp).toLocaleString()}</td>
-                      <td className="px-6 py-4"><div className="font-medium text-white">{trade.whale_name}</div></td>
-                      <td className="px-6 py-4"><span className={\`px-3 py-1 rounded-full text-xs font-bold \${trade.side === 'BUY' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}\`}>{trade.side}</span></td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-white">{trade.whale_name}</div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${trade.side === 'BUY' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'}`}>
+                          {trade.side}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-gray-300">{trade.size.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-blue-400">\${trade.price.toFixed(2)}</td>
-                      <td className="px-6 py-4 text-yellow-400 font-medium">\${trade.amount.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-blue-400">${trade.price.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-yellow-400 font-medium">${trade.amount.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
