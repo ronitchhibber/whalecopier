@@ -1,0 +1,13 @@
+# Dashboard Dependencies
+streamlit>=1.28.0
+plotly>=5.17.0
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# Existing dependencies
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+aiohttp>=3.9.0
+asyncio>=3.4.3
+python-dotenv>=1.0.0

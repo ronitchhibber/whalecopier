@@ -17,10 +17,10 @@ from src.services.whale_trade_monitor import WhaleTradeMonitor
 def main():
     """Main entry point."""
     print("=" * 80)
-    print("🚀 WHALE TRADE MONITOR")
+    print("🚀 WHALE TRADE MONITOR - LIVE MODE")
     print("=" * 80)
     print()
-    print("This service will monitor whale trades every 15 minutes:")
+    print("This service will monitor whale trades every 1 minute:")
     print("  • Check all enabled whales for new activity")
     print("  • Detect when new trades are made")
     print("  • Update most_recent_trade_at timestamp")
@@ -29,8 +29,8 @@ def main():
     print("Press Ctrl+C to stop")
     print()
 
-    # Create and run monitor
-    monitor = WhaleTradeMonitor(check_interval_minutes=15)
+    # Create and run monitor (1 minute refresh)
+    monitor = WhaleTradeMonitor(check_interval_minutes=1)
 
     try:
         asyncio.run(monitor.run())

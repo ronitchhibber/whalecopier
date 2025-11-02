@@ -119,7 +119,9 @@ strategies = {
             "positions": {},
             "trades": [],
             "pnl": 0.0,
-            "initial_balance": 10000.0
+            "initial_balance": 10000.0,
+            "unrealized_pnl": 0.0,
+            "total_value": 10000.0
         }
     },
     "high_sharpe": {
@@ -140,7 +142,9 @@ strategies = {
             "positions": {},
             "trades": [],
             "pnl": 0.0,
-            "initial_balance": 10000.0
+            "initial_balance": 10000.0,
+            "unrealized_pnl": 0.0,
+            "total_value": 10000.0
         }
     },
     "diversified": {
@@ -162,7 +166,9 @@ strategies = {
             "positions": {},
             "trades": [],
             "pnl": 0.0,
-            "initial_balance": 10000.0
+            "initial_balance": 10000.0,
+            "unrealized_pnl": 0.0,
+            "total_value": 10000.0
         }
     },
     "conservative": {
@@ -183,7 +189,9 @@ strategies = {
             "positions": {},
             "trades": [],
             "pnl": 0.0,
-            "initial_balance": 10000.0
+            "initial_balance": 10000.0,
+            "unrealized_pnl": 0.0,
+            "total_value": 10000.0
         }
     },
     "aggressive": {
@@ -205,28 +213,192 @@ strategies = {
             "positions": {},
             "trades": [],
             "pnl": 0.0,
-            "initial_balance": 10000.0
+            "initial_balance": 10000.0,
+            "unrealized_pnl": 0.0,
+            "total_value": 10000.0
         }
     }
 }
 
 
+# ============================================================================
+# MARKET PRICE & UNREALIZED P&L FUNCTIONS
+# ============================================================================
+
+async def fetch_market_price(market_id: str) -> dict:
+    """Fetch current market prices from Polymarket API"""
+    try:
+        import aiohttp
+        async with aiohttp.ClientSession() as session:
+            url = f"https://gamma-api.polymarket.com/markets/{market_id}"
+            async with session.get(url) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    # Polymarket returns outcome prices
+                    return {
+                        "yes_price": float(data.get("outcome_prices", [0.5, 0.5])[1]),
+                        "no_price": float(data.get("outcome_prices", [0.5, 0.5])[0]),
+                        "last_updated": datetime.utcnow().isoformat()
+                    }
+    except Exception as e:
+        logger.error(f"Error fetching market price for {market_id}: {e}")
+
+    # Return default 50/50 if unable to fetch
+    return {"yes_price": 0.5, "no_price": 0.5, "last_updated": None}
+
+
+def calculate_unrealized_pnl(account: dict, market_prices: dict = None) -> tuple:
+    """
+    Calculate unrealized P&L from open positions.
+    Returns (unrealized_pnl, total_value)
+
+    market_prices: dict mapping market_id -> {"yes_price": float, "no_price": float}
+    """
+    unrealized_pnl = 0.0
+
+    if not account.get("positions"):
+        return 0.0, account["balance"]
+
+    for market_id, position in account["positions"].items():
+        if position.get("status") == "open":
+            entry_price = position.get("entry_price", 0.5)
+            shares = position.get("shares", 0)
+            side = position.get("side", "YES")
+            cost_basis = position.get("cost_basis", 0)
+
+            # Get current market price
+            if market_prices and market_id in market_prices:
+                current_price = market_prices[market_id].get(f"{side.lower()}_price", 0.5)
+            else:
+                # Default to entry price if no market data (conservative)
+                current_price = entry_price
+
+            # Calculate unrealized P&L
+            # Current value - Cost basis
+            current_value = shares * current_price
+            position_pnl = current_value - cost_basis
+            unrealized_pnl += position_pnl
+
+    # Total value = cash balance + unrealized position value
+    total_value = account["balance"] + unrealized_pnl
+
+    return unrealized_pnl, total_value
+
+
+def update_account_values(account: dict, market_prices: dict = None):
+    """Update account unrealized P&L and total value"""
+    unrealized_pnl, total_value = calculate_unrealized_pnl(account, market_prices)
+    account["unrealized_pnl"] = unrealized_pnl
+    account["total_value"] = total_value
+    return account
+
+
 def check_whale_matches_strategy(whale: dict, strategy: dict) -> bool:
-    """Check if a whale matches the strategy's criteria"""
+    """Check if a whale matches the strategy's criteria with granular filtering"""
     criteria = strategy["criteria"]
 
     if criteria["type"] == "filter":
-        # Filter-based strategy: check specific metrics
-        if "min_sharpe" in criteria and whale.get("sharpe_ratio", 0) < criteria["min_sharpe"]:
-            return False
-        if "min_win_rate" in criteria and whale.get("win_rate", 0) < criteria["min_win_rate"]:
-            return False
-        if "min_quality_score" in criteria and whale.get("quality_score", 0) < criteria["min_quality_score"]:
-            return False
+        # Core performance metrics
+        if "min_sharpe" in criteria and criteria["min_sharpe"] is not None:
+            if whale.get("sharpe_ratio", 0) < criteria["min_sharpe"]:
+                return False
+
+        if "min_win_rate" in criteria and criteria["min_win_rate"] is not None:
+            if whale.get("win_rate", 0) < criteria["min_win_rate"]:
+                return False
+
+        if "min_quality_score" in criteria and criteria["min_quality_score"] is not None:
+            if whale.get("quality_score", 0) < criteria["min_quality_score"]:
+                return False
+
+        # Volume and trade metrics
+        if "min_total_trades" in criteria and criteria["min_total_trades"] is not None:
+            if whale.get("total_trades", 0) < criteria["min_total_trades"]:
+                return False
+
+        if "min_total_volume" in criteria and criteria["min_total_volume"] is not None:
+            if whale.get("total_volume", 0) < criteria["min_total_volume"]:
+                return False
+
+        # Position sizing metrics
+        if "max_avg_position_size" in criteria and criteria["max_avg_position_size"] is not None:
+            if whale.get("avg_position_size", float('inf')) > criteria["max_avg_position_size"]:
+                return False
+
+        if "min_avg_position_size" in criteria and criteria["min_avg_position_size"] is not None:
+            if whale.get("avg_position_size", 0) < criteria["min_avg_position_size"]:
+                return False
+
+        # P&L and profitability metrics
+        if "min_profit_factor" in criteria and criteria["min_profit_factor"] is not None:
+            profit_factor = whale.get("profit_factor", 0)
+            if profit_factor < criteria["min_profit_factor"]:
+                return False
+
+        if "min_roi" in criteria and criteria["min_roi"] is not None:
+            roi = whale.get("roi", 0)
+            if roi < criteria["min_roi"]:
+                return False
+
+        if "max_drawdown" in criteria and criteria["max_drawdown"] is not None:
+            drawdown = abs(whale.get("max_drawdown", 0))
+            if drawdown > criteria["max_drawdown"]:
+                return False
+
+        # Consistency and reliability
+        if "min_consistency_score" in criteria and criteria["min_consistency_score"] is not None:
+            consistency = whale.get("consistency_score", 0)
+            if consistency < criteria["min_consistency_score"]:
+                return False
+
+        # Category filtering
+        if "preferred_categories" in criteria and criteria["preferred_categories"]:
+            whale_categories = whale.get("top_categories", [])
+            # Check if whale has any of the preferred categories
+            if not any(cat in whale_categories for cat in criteria["preferred_categories"]):
+                return False
+
+        # Whale tier filtering
+        if "whale_tiers" in criteria and criteria["whale_tiers"]:
+            whale_tier = whale.get("tier", "LOW")
+            if whale_tier not in criteria["whale_tiers"]:
+                return False
+
+        # Market diversity metrics
+        if "min_markets_traded" in criteria and criteria["min_markets_traded"] is not None:
+            markets_traded = whale.get("markets_traded", 0)
+            if markets_traded < criteria["min_markets_traded"]:
+                return False
+
+        if "max_markets_traded" in criteria and criteria["max_markets_traded"] is not None:
+            markets_traded = whale.get("markets_traded", float('inf'))
+            if markets_traded > criteria["max_markets_traded"]:
+                return False
+
+        # Trade timing metrics
+        if "min_avg_hold_time" in criteria and criteria["min_avg_hold_time"] is not None:
+            avg_hold_time = whale.get("avg_hold_time_hours", 0)
+            if avg_hold_time < criteria["min_avg_hold_time"]:
+                return False
+
+        if "max_avg_hold_time" in criteria and criteria["max_avg_hold_time"] is not None:
+            avg_hold_time = whale.get("avg_hold_time_hours", float('inf'))
+            if avg_hold_time > criteria["max_avg_hold_time"]:
+                return False
+
+        # Recent performance (last N days)
+        if "min_recent_performance" in criteria and criteria["min_recent_performance"] is not None:
+            days = criteria.get("recent_performance_days", 30)
+            # This would require calculating recent P&L from trades
+            # For now, we'll skip this check if the data isn't available
+            recent_pnl = whale.get(f"pnl_last_{days}d", None)
+            if recent_pnl is not None and recent_pnl < criteria["min_recent_performance"]:
+                return False
+
         return True
 
     elif criteria["type"] == "top_n":
-        # Top-N strategy: handled in get_strategy_whales()
+        # Top-N strategy: handled in filter_whales_by_strategy()
         return True
 
     return False
@@ -280,6 +452,11 @@ def copy_trade_to_strategy(strategy_id: str, trade_data: dict, whale_data: dict)
     if position_size > account["balance"]:
         return {"error": "Insufficient balance"}
 
+    # Calculate shares based on price
+    entry_price = trade_data.get("price", 0.5)
+    shares = position_size / entry_price if entry_price > 0 else 0
+    cost_basis = position_size
+
     # Create paper trade entry
     paper_trade = {
         "id": len(account["trades"]) + 1,
@@ -290,7 +467,10 @@ def copy_trade_to_strategy(strategy_id: str, trade_data: dict, whale_data: dict)
         "side": trade_data.get("side"),
         "outcome": trade_data.get("outcome"),
         "amount": position_size,
-        "price": trade_data.get("price"),
+        "price": entry_price,
+        "shares": shares,
+        "cost_basis": cost_basis,
+        "entry_price": entry_price,
         "timestamp": trade_data.get("timestamp", datetime.utcnow().isoformat()),
         "pnl": 0.0,
         "status": "open"
@@ -300,9 +480,18 @@ def copy_trade_to_strategy(strategy_id: str, trade_data: dict, whale_data: dict)
     account["trades"].append(paper_trade)
     account["balance"] -= position_size
 
-    # Store position
+    # Store position (for mark-to-market P&L calculation)
     position_key = f"{trade_data.get('market_id')}_{trade_data.get('outcome')}"
-    account["positions"][position_key] = paper_trade
+    account["positions"][position_key] = {
+        "market_id": trade_data.get("market_id"),
+        "side": trade_data.get("outcome"),
+        "shares": shares,
+        "entry_price": entry_price,
+        "cost_basis": cost_basis,
+        "timestamp": trade_data.get("timestamp", datetime.utcnow().isoformat()),
+        "status": "open",
+        "trade_id": paper_trade["id"]
+    }
 
     logger.info(f"Strategy '{strategy['name']}' copied trade: ${position_size:.2f} on {whale_data.get('pseudonym')}")
 
@@ -611,14 +800,22 @@ async def get_strategies():
     for strategy_id, strategy in strategies.items():
         account = strategy["account"]
 
-        # Calculate total P&L for strategy
-        total_pnl = sum(t.get("pnl", 0) for t in account["trades"])
-        account["pnl"] = total_pnl
+        # Update account values with unrealized P&L
+        # Note: For now, using conservative estimate (no market prices)
+        # TODO: Fetch real-time market prices for accurate unrealized P&L
+        update_account_values(account, market_prices=None)
+
+        # Calculate total realized P&L for strategy
+        total_realized_pnl = sum(t.get("pnl", 0) for t in account["trades"])
+        account["pnl"] = total_realized_pnl
 
         # Calculate performance metrics
         total_trades = len(account["trades"])
         winning_trades = sum(1 for t in account["trades"] if t.get("pnl", 0) > 0)
         win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+
+        # Total P&L includes both realized and unrealized
+        total_pnl = total_realized_pnl + account["unrealized_pnl"]
 
         result.append({
             "id": strategy["id"],
@@ -626,12 +823,17 @@ async def get_strategies():
             "description": strategy["description"],
             "active": strategy["active"],
             "criteria": strategy["criteria"],
-            "position_sizing": strategy["position_sizing"],
+            "position_sizing": strategy.get("position_sizing", {}),
+            "risk_management": strategy.get("risk_management", {}),
             "account": {
-                "balance": account["balance"],
+                "balance": account["balance"],  # Cash only
+                "total_value": account["total_value"],  # Cash + unrealized positions
                 "initial_balance": account["initial_balance"],
                 "total_trades": total_trades,
-                "pnl": total_pnl,
+                "open_positions": len([p for p in account.get("positions", {}).values() if p.get("status") == "open"]),
+                "realized_pnl": total_realized_pnl,
+                "unrealized_pnl": account["unrealized_pnl"],
+                "total_pnl": total_pnl,
                 "win_rate": win_rate,
                 "roi": (total_pnl / account["initial_balance"] * 100) if account["initial_balance"] > 0 else 0
             }
@@ -706,6 +908,100 @@ async def reset_strategy(strategy_id: str):
         "strategy_id": strategy_id,
         "strategy_name": strategy["name"],
         "new_balance": initial_balance
+    }
+
+
+@app.post("/api/strategies/create")
+async def create_custom_strategy(strategy_data: dict):
+    """Create a new custom strategy dynamically"""
+    global strategies
+
+    # Generate unique strategy ID from name
+    strategy_id = strategy_data["name"].lower().replace(" ", "_").replace("-", "_")
+
+    # Ensure unique ID
+    counter = 1
+    base_id = strategy_id
+    while strategy_id in strategies:
+        strategy_id = f"{base_id}_{counter}"
+        counter += 1
+
+    # Build criteria based on type
+    if strategy_data["criteria_type"] == "top_n":
+        criteria = {
+            "type": "top_n",
+            "n": strategy_data["top_n"],
+            "sort_by": strategy_data["sort_by"]
+        }
+    else:  # filter
+        criteria = {
+            "type": "filter",
+            "min_sharpe": strategy_data.get("min_sharpe"),
+            "min_win_rate": strategy_data.get("min_win_rate"),
+            "min_quality_score": strategy_data.get("min_quality_score"),
+            "min_total_trades": strategy_data.get("min_total_trades"),
+            "min_total_volume": strategy_data.get("min_total_volume"),
+            "max_avg_position_size": strategy_data.get("max_avg_position_size"),
+            "min_avg_position_size": strategy_data.get("min_avg_position_size"),
+            "min_profit_factor": strategy_data.get("min_profit_factor"),
+            "min_roi": strategy_data.get("min_roi"),
+            "max_drawdown": strategy_data.get("max_drawdown"),
+            "min_consistency_score": strategy_data.get("min_consistency_score"),
+            "preferred_categories": strategy_data.get("preferred_categories", []),
+            "whale_tiers": strategy_data.get("whale_tiers", ["MEGA", "HIGH", "MEDIUM"]),
+            "min_markets_traded": strategy_data.get("min_markets_traded"),
+            "max_markets_traded": strategy_data.get("max_markets_traded"),
+            "min_avg_hold_time": strategy_data.get("min_avg_hold_time"),
+            "max_avg_hold_time": strategy_data.get("max_avg_hold_time"),
+            "min_recent_performance": strategy_data.get("min_recent_performance"),
+            "recent_performance_days": strategy_data.get("recent_performance_days", 30)
+        }
+
+    # Create new strategy
+    strategies[strategy_id] = {
+        "id": strategy_id,
+        "name": strategy_data["name"],
+        "description": strategy_data["description"],
+        "active": False,
+        "criteria": criteria,
+        "position_sizing": {
+            "base_pct": strategy_data["base_position_pct"],
+            "max_pct": strategy_data["max_position_pct"],
+            "use_kelly": strategy_data.get("use_kelly", False),
+            "kelly_fraction": strategy_data.get("kelly_fraction", 0.25),
+            "scale_by_confidence": strategy_data.get("scale_by_confidence", True),
+            "scale_by_liquidity": strategy_data.get("scale_by_liquidity", True),
+            "min_position_size": strategy_data.get("min_position_size", 50),
+            "max_position_size": strategy_data.get("max_position_size", None)
+        },
+        "risk_management": {
+            "max_positions": strategy_data.get("max_positions", 10),
+            "max_per_market": strategy_data.get("max_per_market", 1000),
+            "max_per_category": strategy_data.get("max_per_category", 0.3),
+            "max_total_exposure": strategy_data.get("max_total_exposure", 0.8),
+            "stop_loss_pct": strategy_data.get("stop_loss_pct"),
+            "take_profit_pct": strategy_data.get("take_profit_pct"),
+            "trailing_stop_pct": strategy_data.get("trailing_stop_pct"),
+            "max_daily_loss": strategy_data.get("max_daily_loss"),
+            "circuit_breaker_loss": strategy_data.get("circuit_breaker_loss", -0.15)
+        },
+        "account": {
+            "balance": strategy_data["initial_balance"],
+            "positions": {},
+            "trades": [],
+            "pnl": 0.0,
+            "initial_balance": strategy_data["initial_balance"],
+            "unrealized_pnl": 0.0,
+            "total_value": strategy_data["initial_balance"]
+        }
+    }
+
+    logger.info(f"Created new strategy: {strategy_data['name']} (ID: {strategy_id})")
+
+    return {
+        "success": True,
+        "strategy_id": strategy_id,
+        "strategy_name": strategy_data["name"]
     }
 
 

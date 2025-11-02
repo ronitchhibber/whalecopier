@@ -1,200 +1,76 @@
-# WhaleTracker - Quick Start Guide
-
-## Your System Is Ready!
-
-### 1. Open Dashboard
-```
-http://localhost:8000
-```
-
-### 2. Start Monitoring
-Click the **"START MONITORING"** button in the top-right corner
-
-The button will turn green and say **"STOP MONITORING"** when active.
-
-### 3. Watch the Magic Happen
-
-The system will now:
-- Check 50 profitable whales every 15 minutes
-- Detect when they make trades
-- Update stats in real-time
-- Execute paper trades automatically
+# 🚀 QUICK START GUIDE
+**Get the Whale Trading System Running in 5 Minutes**
 
 ---
 
-## Dashboard Tabs
+## 📋 Prerequisites
 
-### Whales Tab
-- See all 50 active whales
-- View their profit/loss, quality scores, tier
-- Sorted by quality score (best first)
-- Stats shown: Active Whales, Trades 24h, Volume 24h
-
-### Live Trades Tab
-- Real-time feed of whale trades
-- Updates every 5 seconds when active
-- Shows: Time, Whale, Market, Side, Size, Price
-
-### Trading Tab
-- **Paper/Live toggle**: Switch trading modes
-- **Active Bets**: Your current open positions
-- **Trade History**: All your past trades
-- Performance stats: Balance, P&L, Win Rate, ROI
-
-### Methodology Tab
-- How whales are selected
-- Position sizing strategy
-- Risk management rules
-- Quality thresholds
-
-### Settings Tab
-- Configure paper trading
-- Set whale filters
-- Adjust risk management
-- Save/Reset settings
+- Python 3.9+
+- PostgreSQL 14+
+- Node.js 18+ (for frontend)
+- 8GB RAM minimum
 
 ---
 
-## Top 10 Whales You're Tracking
+## ⚡ Quick Start (5 Minutes)
 
-1. **fengdubiying** - $686,052 profit (MEGA)
-2. **LuckyCharmLuckyCharm** - $301,151 profit (MEGA)
-3. **PringlesMax** - $296,613 profit (MEGA)
-4. **Dillius** - $227,183 profit (MEGA)
-5. **Mayuravarma** - $226,650 profit (MEGA)
-6. **S-Works** - $200,854 profit (MEGA)
-7. **SwissMiss** - $192,955 profit (MEGA)
-8. **MrSparklySimpsons** - $178,334 profit (MEGA)
-9. **slight-** - $132,779 profit (MEGA)
-10. **wasianiversonworldchamp2025** - $100,642 profit (MEGA)
+### 1. Install Dependencies
 
----
+\`\`\`bash
+# Backend dependencies
+pip3 install -r requirements.txt
 
-## What Happens When You Start Monitoring?
+# Dashboard dependencies  
+pip3 install -r requirements_dashboard.txt
 
-**Every 15 minutes**:
-1. System checks all 50 whales for new trades
-2. If a whale made a trade, it's detected
-3. Trade appears in "Live Trades" tab
-4. Paper trade is executed automatically (if enabled)
-5. Stats update in real-time
+# Frontend dependencies (if using React dashboard)
+cd frontend
+npm install
+cd ..
+\`\`\`
 
-**Every 6 hours**:
-1. System calculates comprehensive 24h metrics
-2. Updates volume, trade count, activity data
-3. Refreshes quality scores
-4. Updates whale rankings
+### 2. Start Services
 
----
+**Production Dashboard (Recommended):**
 
-## Your Wallet
+\`\`\`bash
+./run_dashboard.sh
+\`\`\`
 
-**Address**: `0xCa1120fcf33DA4334028900dD77428Ea348Aa359`
+Access: http://localhost:8501
 
-**Status**: Connected and ready
+### 3. Discover Whales
 
-**Current Mode**: Paper trading (no real money)
+\`\`\`bash
+# Quick discovery (100K trades, ~30 min)
+python3 scripts/massive_whale_discovery.py
 
-**To enable live trading**:
-```bash
-pip3 install py-clob-client
-```
+# Full discovery (1M trades, ~2 hours, runs in background)
+nohup python3 scripts/massive_whale_discovery_1M.py > whale_discovery.log 2>&1 &
+tail -f whale_discovery.log
+\`\`\`
 
----
+### 4. Run Backtest
 
-## Monitoring Status
-
-Check if system is running:
-- Green button says "STOP MONITORING" = Running
-- Gray button says "START MONITORING" = Not running
-
-You can start/stop anytime with the button.
+\`\`\`bash
+python3 scripts/run_whale_backtest.py --start 2024-01-01 --end 2024-12-31
+\`\`\`
 
 ---
 
-## Quick Commands
+## 🎯 Production Modules
 
-### Check System Status
-```bash
-curl http://localhost:8000/api/system/status
-```
+All modules ready to use:
+- ✅ 5-Factor WQS Calculator
+- ✅ 3-Stage Signal Pipeline
+- ✅ Adaptive Kelly Position Sizing
+- ✅ Multi-Tier Risk Management
+- ✅ Performance Attribution
+- ✅ Walk-Forward Backtesting
 
-### View Whale Count
-```bash
-curl http://localhost:8000/api/stats/summary
-```
-
-### Re-enable Whales (if needed)
-```bash
-python3 scripts/reenable_whales.py
-```
-
-### Test Wallet Connection
-```bash
-python3 scripts/test_wallet_connection.py
-```
+See `/COMPLETE_SYSTEM_SUMMARY.md` for full documentation.
 
 ---
 
-## Expected Behavior
-
-**First Hour**: System starts checking whales, no trades yet (normal)
-
-**After First Trade**: You'll see:
-- Trade appears in Live Trades tab
-- Trades 24h counter increases
-- Volume 24h shows dollar amount
-- Paper trade executed (visible in Trading tab)
-
-**After 6 Hours**: Full metrics update:
-- All stats refresh
-- Quality scores recalculated
-- 24h data updated
-
----
-
-## Tips
-
-1. **Leave it running**: System works best when monitoring continuously
-2. **Check every few hours**: Trades happen throughout the day
-3. **Paper trade first**: Test the system before going live
-4. **Monitor performance**: Track your win rate and ROI in Trading tab
-5. **Adjust settings**: Fine-tune based on your results
-
----
-
-## Troubleshooting
-
-**No trades showing?**
-- Whales may not have traded yet (check back in a few hours)
-- Verify system is running (button says "STOP MONITORING")
-
-**Dashboard not updating?**
-- Refresh the page
-- Check browser console for errors (F12)
-
-**Want to add more whales?**
-- System currently has 50 most profitable whales
-- Can expand to hundreds/thousands if needed
-
----
-
-## That's It!
-
-Your WhaleTracker is fully set up and ready to go.
-
-**Click "START MONITORING" and watch the profits roll in!**
-
-Dashboard: http://localhost:8000
-
----
-
-## Next Steps
-
-- Start monitoring now
-- Watch for first trades
-- Check Trading tab for performance
-- Adjust settings as needed
-- Enable live trading when ready
-
-Good luck! 🚀
+**Last Updated:** November 2, 2025
+**Status:** Production Framework Complete ✅
