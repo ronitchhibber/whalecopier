@@ -190,7 +190,7 @@ class Position(Base):
     # P&L tracking
     initial_value = Column(Numeric(20, 2), nullable=False)
     current_value = Column(Numeric(20, 2))
-    cash_pnl = Column(Numeric(20, 2))
+    unrealized_pnl = Column(Numeric(20, 2))
     percent_pnl = Column(Numeric(10, 2))
     realized_pnl = Column(Numeric(20, 2), default=0)
 
@@ -231,7 +231,7 @@ class Position(Base):
     )
 
     def __repr__(self):
-        return f"<Position(id={self.position_id}, whale={self.source_whale[:8] if self.source_whale else 'N/A'}, pnl={self.cash_pnl})>"
+        return f"<Position(id={self.position_id}, whale={self.source_whale[:8] if self.source_whale else 'N/A'}, pnl={self.unrealized_pnl})>"
 
 
 class Order(Base):
@@ -349,7 +349,7 @@ class Event(Base):
     # Event details
     title = Column(String(200), nullable=False)
     description = Column(Text)
-    metadata = Column(JSONB, default={})
+    event_metadata = Column(JSONB, default={})
 
     # Related entities
     whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'))

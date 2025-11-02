@@ -1,0 +1,174 @@
+{
+  "version": "1.0",
+  "enabled": true,
+  "last_updated": "2025-10-31T22:00:00Z",
+
+  "whale_tiers": {
+    "mega": {
+      "description": "Mega whales with $100K+ profit",
+      "min_pnl": 100000,
+      "copy_percentage": 100,
+      "max_position_size_usd": 1000,
+      "min_confidence": 0.7,
+      "auto_copy": true,
+      "whales": [
+        "0x17db3fcd93ba12d38382a0cade24b200185c5f6d",
+        "0xed88d69d689f3e2f6d1f77b2e35d089c581df3c4",
+        "0x3657862e57070b82a289b5887ec943a7c2166b14",
+        "0xee00ba338c59557141789b127927a55f5cc5cea1",
+        "0xdbade4c82fb72780a0db9a38f821d8671aba9c95",
+        "0xd0b4c4c020abdc88ad9a884f999f3d8cff8ffed6",
+        "0x090a0d3fc9d68d3e16db70e3460e3e4b510801b4",
+        "0xb744f56635b537e859152d14b022af5afe485210"
+      ]
+    },
+    "large": {
+      "description": "Large whales with $10K-100K profit",
+      "min_pnl": 10000,
+      "max_pnl": 100000,
+      "copy_percentage": 75,
+      "max_position_size_usd": 500,
+      "min_confidence": 0.75,
+      "auto_copy": true,
+      "whales": []
+    },
+    "medium": {
+      "description": "Medium whales with $1K-10K profit",
+      "min_pnl": 1000,
+      "max_pnl": 10000,
+      "copy_percentage": 50,
+      "max_position_size_usd": 250,
+      "min_confidence": 0.8,
+      "auto_copy": false,
+      "whales": []
+    }
+  },
+
+  "risk_management": {
+    "global_limits": {
+      "max_total_exposure_usd": 10000,
+      "max_positions": 20,
+      "max_per_market": 3,
+      "max_daily_trades": 50,
+      "max_loss_per_day_usd": 1000
+    },
+
+    "position_sizing": {
+      "strategy": "kelly_fraction",
+      "kelly_fraction": 0.25,
+      "min_position_usd": 10,
+      "max_position_usd": 1000,
+      "scale_by_confidence": true,
+      "scale_by_whale_tier": true
+    },
+
+    "stop_loss": {
+      "enabled": true,
+      "default_stop_loss_pct": 25,
+      "trailing_stop": true,
+      "trailing_stop_pct": 15
+    },
+
+    "take_profit": {
+      "enabled": true,
+      "default_take_profit_pct": 50,
+      "partial_take_profit": true,
+      "partial_tp_levels": [
+        {"at_pct": 25, "close_pct": 50},
+        {"at_pct": 50, "close_pct": 75}
+      ]
+    }
+  },
+
+  "trade_filters": {
+    "min_whale_position_size_usd": 100,
+    "max_whale_position_size_usd": 50000,
+    "min_market_liquidity_usd": 10000,
+    "max_market_end_days": 90,
+    "min_market_end_days": 1,
+
+    "allowed_categories": [
+      "Politics",
+      "Crypto",
+      "Sports",
+      "Business",
+      "Science"
+    ],
+
+    "blocked_categories": [
+      "Pop Culture"
+    ],
+
+    "price_filters": {
+      "min_price": 0.05,
+      "max_price": 0.95,
+      "avoid_extremes": true
+    },
+
+    "timing_filters": {
+      "copy_delay_seconds": 5,
+      "max_copy_delay_minutes": 30,
+      "avoid_market_close_hours": 24
+    }
+  },
+
+  "whale_specific_rules": {
+    "0x17db3fcd93ba12d38382a0cade24b200185c5f6d": {
+      "name": "fengdubiying",
+      "copy_percentage": 100,
+      "max_position_usd": 1000,
+      "auto_copy": true,
+      "notes": "Top performer - 127% ROI, $686K profit"
+    },
+    "0xafbacaeeda63f31202759eff7f8126e49adfe61b": {
+      "name": "SammySledge",
+      "copy_percentage": 50,
+      "max_position_usd": 300,
+      "auto_copy": false,
+      "notes": "Extreme ROI (1174%) but low volume - manual review"
+    },
+    "0xed88d69d689f3e2f6d1f77b2e35d089c581df3c4": {
+      "name": "Dillius",
+      "copy_percentage": 100,
+      "max_position_usd": 800,
+      "auto_copy": true,
+      "notes": "Consistent performer - $227K profit"
+    }
+  },
+
+  "market_analysis": {
+    "require_analysis": true,
+    "min_volume_24h_usd": 5000,
+    "check_price_impact": true,
+    "max_price_impact_pct": 2,
+    "check_whale_history": true,
+    "min_whale_trades_in_category": 3
+  },
+
+  "execution": {
+    "order_type": "LIMIT",
+    "limit_price_slippage_pct": 1,
+    "timeout_seconds": 60,
+    "retry_on_failure": true,
+    "max_retries": 3,
+    "use_maker_orders": true,
+    "cancel_unfilled_after_minutes": 5
+  },
+
+  "notifications": {
+    "enabled": true,
+    "notify_on_copy": true,
+    "notify_on_fill": true,
+    "notify_on_stop_loss": true,
+    "notify_on_take_profit": true,
+    "notify_on_error": true,
+    "notification_channels": ["log", "console"]
+  },
+
+  "backtesting": {
+    "enabled": false,
+    "simulate_before_live": true,
+    "simulation_days": 7,
+    "min_simulated_trades": 10
+  }
+}

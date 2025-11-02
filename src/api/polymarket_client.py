@@ -1,13 +1,9 @@
 """
 Polymarket API Client Wrapper
 Handles authentication, REST API calls, and WebSocket connections
+
+NOTE: Requires py-clob-client package (requires Python 3.9.10+)
 """
-from py_clob_client.client import ClobClient
-from py_clob_client.clob_types import (
-    OrderArgs, MarketOrderArgs, OrderType,
-    OpenOrderParams, DropNotificationParams
-)
-from py_clob_client.order_builder.constants import BUY, SELL
 from typing import List, Dict, Optional, Any
 import httpx
 import asyncio
@@ -21,6 +17,28 @@ import time
 from src.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Conditional import for py_clob_client (requires Python 3.9.10+)
+PY_CLOB_CLIENT_AVAILABLE = False
+try:
+    from py_clob_client.client import ClobClient
+    from py_clob_client.clob_types import (
+        OrderArgs, MarketOrderArgs, OrderType,
+        OpenOrderParams, DropNotificationParams
+    )
+    from py_clob_client.order_builder.constants import BUY, SELL
+    PY_CLOB_CLIENT_AVAILABLE = True
+except ImportError:
+    logger.warning("py-clob-client not available - PolymarketClient will operate in stub mode. Requires Python 3.9.10+")
+    # Create stub types for when py_clob_client is not available
+    ClobClient = None
+    OrderArgs = None
+    MarketOrderArgs = None
+    OrderType = None
+    OpenOrderParams = None
+    DropNotificationParams = None
+    BUY = "BUY"
+    SELL = "SELL"
 
 
 class PolymarketClient:
@@ -42,21 +60,28 @@ class PolymarketClient:
         self.passphrase = passphrase or settings.POLYMARKET_PASSPHRASE
         self.private_key = private_key or settings.PRIVATE_KEY
 
-        # Initialize CLOB client
-        self.clob_client = ClobClient(
-            host=settings.POLYMARKET_API_URL,
-            key=self.private_key if self.private_key else None,
-            chain_id=settings.CHAIN_ID,
-            signature_type=0,  # 0 = EOA (MetaMask), 1 = Email/Magic, 2 = Browser
-        )
+        # Initialize CLOB client (if py_clob_client is available)
+        if PY_CLOB_CLIENT_AVAILABLE and ClobClient is not None:
+            self.clob_client = ClobClient(
+                host=settings.POLYMARKET_API_URL,
+                key=self.private_key if self.private_key else None,
+                chain_id=settings.CHAIN_ID,
+                signature_type=0,  # 0 = EOA (MetaMask), 1 = Email/Magic, 2 = Browser
+            )
 
-        # Set API credentials if available
-        if all([self.api_key, self.secret, self.passphrase]):
-            self.clob_client.set_api_creds({
-                'apiKey': self.api_key,
-                'secret': self.secret,
-                'passphrase': self.passphrase,
-            })
+            # Set API credentials if available
+            if all([self.api_key, self.secret, self.passphrase]):
+                self.clob_client.set_api_creds({
+                    'apiKey': self.api_key,
+                    'secret': self.secret,
+                    'passphrase': self.passphrase,
+                })
+        else:
+            self.clob_client = None
+            logger.warning(
+                "py-clob-client not available - trading functionality disabled. "
+                "Install py-clob-client with Python 3.9.10+ for full functionality."
+            )
 
         # Data API base URL
         self.data_api_url = settings.POLYMARKET_DATA_API_URL

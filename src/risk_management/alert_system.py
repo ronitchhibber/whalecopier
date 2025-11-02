@@ -20,7 +20,7 @@ from enum import Enum
 from dataclasses import dataclass, field
 import aiohttp
 
-from risk_manager import RiskEvent, RiskLevel, RiskEventType
+from .risk_manager import RiskEvent, RiskLevel, RiskEventType
 
 logger = logging.getLogger(__name__)
 

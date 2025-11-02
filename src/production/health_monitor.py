@@ -14,7 +14,7 @@ import asyncio
 import psutil
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 from enum import Enum
 from dataclasses import dataclass, field
