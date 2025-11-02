@@ -215,12 +215,33 @@ async def get_trades(limit: int = 50):
                 select(Whale).where(Whale.address == t.trader_address)
             ).scalar_one_or_none()
 
+            # Format whale name: use pseudonym if available and not just an address
+            if whale and whale.pseudonym:
+                # Check if pseudonym is actually just the address (0x...)
+                if whale.pseudonym.startswith('0x') and len(whale.pseudonym) > 20:
+                    # It's an address stored as pseudonym, truncate it
+                    whale_display_name = f"{whale.pseudonym[:6]}...{whale.pseudonym[-4:]}"
+                else:
+                    # Real pseudonym, use it
+                    whale_display_name = whale.pseudonym
+            else:
+                # No whale record or no pseudonym, truncate address
+                addr = t.trader_address
+                whale_display_name = f"{addr[:6]}...{addr[-4:]}" if len(addr) > 10 else addr
+
+            # Format market title: use stored title or show "Market {id[:8]}"
+            if t.market_title:
+                market_display = t.market_title
+            else:
+                market_id_str = str(t.market_id) if t.market_id else ""
+                market_display = f"Market {market_id_str[:8]}..." if len(market_id_str) > 8 else f"Market {market_id_str}"
+
             result.append({
                 "id": t.trade_id,
                 "trader_address": t.trader_address,
-                "whale_name": whale.pseudonym if whale and whale.pseudonym else None,
+                "whale_name": whale_display_name,
                 "market_id": t.market_id if t.market_id else "",
-                "market_title": t.market_title if t.market_title else None,
+                "market_title": market_display,
                 "side": t.side,
                 "size": float(t.size) if t.size else 0,
                 "price": float(t.price) if t.price else 0,
