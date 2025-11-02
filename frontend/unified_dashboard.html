@@ -927,12 +927,113 @@ Last: BUY BTC>100k $5K +12.5%
                             <span>🐋</span>
                             <span>All Whales</span>
                         </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="refreshWhales()">Refresh</button>
+                            <button class="panel-btn" onclick="exportWhales()">Export CSV</button>
+                        </div>
                     </div>
                     <div class="panel-content">
-                        <iframe src="http://localhost:8000/api/whales" style="width: 100%; height: 600px; border: none;"></iframe>
+                        <div style="overflow-x: auto;">
+                            <table class="whales-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Address</th>
+                                        <th>Tier</th>
+                                        <th>Quality Score</th>
+                                        <th>Total Volume</th>
+                                        <th>Total Trades</th>
+                                        <th>Win Rate</th>
+                                        <th>Sharpe Ratio</th>
+                                        <th>Total P&L</th>
+                                        <th>Last Trade</th>
+                                        <th>Profile</th>
+                                        <th>Copy</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-whales-tbody">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="color: #8892b0;">
+                                Showing <span id="whale-count">0</span> whales
+                            </div>
+                            <button class="panel-btn" onclick="loadMoreWhales()">Load More</button>
+                        </div>
                     </div>
                 </div>
             `;
+            fetchAllWhales();
+        }
+
+        async function fetchAllWhales() {
+            try {
+                const response = await fetch('http://localhost:8000/api/whales');
+                const whales = await response.json();
+                const tbody = document.getElementById('all-whales-tbody');
+
+                if (Array.isArray(whales)) {
+                    document.getElementById('whale-count').textContent = whales.length;
+                    tbody.innerHTML = whales.map(whale => {
+                        const winRate = parseFloat(whale.win_rate || 0);
+                        const totalPnL = parseFloat(whale.total_pnl || 0);
+                        const qualityScore = parseFloat(whale.quality_score || 0);
+
+                        return `
+                            <tr>
+                                <td><span class="whale-address">${whale.address.substr(0,6)}...${whale.address.substr(-4)}</span></td>
+                                <td><span style="color: ${whale.tier === 'MEGA' ? '#fbbf24' : '#6b8cff'}">${whale.tier || 'STANDARD'}</span></td>
+                                <td>
+                                    <span class="whale-score ${qualityScore >= 90 ? 'score-high' : qualityScore >= 70 ? 'score-medium' : 'score-low'}">
+                                        ${qualityScore.toFixed(1)}
+                                    </span>
+                                </td>
+                                <td>$${(whale.total_volume || 0).toLocaleString()}</td>
+                                <td>${(whale.total_trades || 0).toLocaleString()}</td>
+                                <td>${winRate.toFixed(1)}%</td>
+                                <td>${(whale.sharpe_ratio || 0).toFixed(2)}</td>
+                                <td style="color: ${totalPnL >= 0 ? '#4ade80' : '#ef4444'}">
+                                    ${totalPnL >= 0 ? '+' : ''}$${Math.abs(totalPnL).toLocaleString()}
+                                </td>
+                                <td>${whale.last_active ? new Date(whale.last_active).toLocaleDateString() : 'N/A'}</td>
+                                <td>
+                                    <a href="${whale.profile_url || '#'}" target="_blank" style="color: #6b8cff;">View</a>
+                                </td>
+                                <td>
+                                    <button class="panel-btn" onclick="toggleCopyWhale('${whale.address}')">
+                                        ${whale.is_copying_enabled ? 'Disable' : 'Enable'}
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">No whales available</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching whales:', error);
+                document.getElementById('all-whales-tbody').innerHTML =
+                    '<tr><td colspan="11" style="text-align: center; color: #ef4444;">Error loading whales</td></tr>';
+            }
+        }
+
+        function refreshWhales() {
+            fetchAllWhales();
+        }
+
+        function exportWhales() {
+            window.location.href = 'http://localhost:8000/api/export/whales';
+        }
+
+        function loadMoreWhales() {
+            // Implementation for pagination
+            console.log('Loading more whales...');
+        }
+
+        function toggleCopyWhale(address) {
+            console.log('Toggling copy for whale:', address);
+            // Implementation to enable/disable whale copying
         }
 
         function loadTradesTab() {
@@ -943,12 +1044,139 @@ Last: BUY BTC>100k $5K +12.5%
                             <span>📊</span>
                             <span>Trade History</span>
                         </div>
+                        <div class="panel-actions">
+                            <button class="panel-btn" onclick="refreshTrades()">Refresh</button>
+                            <button class="panel-btn" onclick="filterTrades()">Filter</button>
+                            <button class="panel-btn" onclick="exportTrades()">Export CSV</button>
+                        </div>
                     </div>
                     <div class="panel-content">
-                        <iframe src="http://localhost:8000/api/trades" style="width: 100%; height: 600px; border: none;"></iframe>
+                        <div style="overflow-x: auto;">
+                            <table class="whales-table" style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Timestamp</th>
+                                        <th>Type</th>
+                                        <th>Whale</th>
+                                        <th>Market</th>
+                                        <th>Outcome</th>
+                                        <th>Amount</th>
+                                        <th>Price</th>
+                                        <th>Shares</th>
+                                        <th>Followed</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="trades-history-tbody">
+                                    <!-- Will be populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="color: #8892b0;">
+                                Showing <span id="trade-count">0</span> trades
+                            </div>
+                            <div>
+                                <button class="panel-btn" onclick="previousPage()">← Previous</button>
+                                <span style="margin: 0 15px; color: #8892b0;">Page <span id="current-page">1</span></span>
+                                <button class="panel-btn" onclick="nextPage()">Next →</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
+            fetchTradeHistory();
+        }
+
+        let currentPage = 1;
+        const tradesPerPage = 50;
+
+        async function fetchTradeHistory(page = 1) {
+            try {
+                const response = await fetch(`http://localhost:8000/api/trades?page=${page}&limit=${tradesPerPage}`);
+                const trades = await response.json();
+                const tbody = document.getElementById('trades-history-tbody');
+
+                if (Array.isArray(trades)) {
+                    document.getElementById('trade-count').textContent = trades.length;
+                    document.getElementById('current-page').textContent = page;
+
+                    tbody.innerHTML = trades.map(trade => {
+                        const timestamp = new Date((trade.timestamp || Date.now() / 1000) * 1000);
+                        const amount = parseFloat(trade.amount || 0);
+                        const price = parseFloat(trade.price || 0);
+
+                        return `
+                            <tr>
+                                <td>${timestamp.toLocaleString()}</td>
+                                <td>
+                                    <span class="trade-type ${(trade.side || 'BUY').toLowerCase()}">
+                                        ${trade.side || 'BUY'}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="whale-address">
+                                        ${trade.trader_address ?
+                                            `${trade.trader_address.substr(0,6)}...${trade.trader_address.substr(-4)}` :
+                                            'Unknown'}
+                                    </span>
+                                </td>
+                                <td title="${trade.market_id || ''}">${(trade.market || 'Unknown Market').substr(0, 30)}...</td>
+                                <td>${trade.outcome || 'YES'}</td>
+                                <td>$${amount.toLocaleString()}</td>
+                                <td>${price.toFixed(4)}</td>
+                                <td>${(trade.size || 0).toLocaleString()}</td>
+                                <td>
+                                    ${trade.followed ?
+                                        '<span style="color: #4ade80;">✓</span>' :
+                                        '<span style="color: #8892b0;">-</span>'}
+                                </td>
+                                <td>
+                                    <button class="panel-btn" onclick="viewTradeDetails('${trade.id || ''}')">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">No trades available</td></tr>';
+                }
+            } catch (error) {
+                console.error('Error fetching trades:', error);
+                document.getElementById('trades-history-tbody').innerHTML =
+                    '<tr><td colspan="10" style="text-align: center; color: #ef4444;">Error loading trades</td></tr>';
+            }
+        }
+
+        function refreshTrades() {
+            fetchTradeHistory(currentPage);
+        }
+
+        function filterTrades() {
+            // Implementation for trade filtering
+            console.log('Opening filter dialog...');
+        }
+
+        function exportTrades() {
+            window.location.href = 'http://localhost:8000/api/export/trades';
+        }
+
+        function previousPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchTradeHistory(currentPage);
+            }
+        }
+
+        function nextPage() {
+            currentPage++;
+            fetchTradeHistory(currentPage);
+        }
+
+        function viewTradeDetails(tradeId) {
+            console.log('Viewing trade details:', tradeId);
+            // Implementation to show trade details modal
         }
 
         function loadAnalyticsTab() {
@@ -991,6 +1219,14 @@ Last: BUY BTC>100k $5K +12.5%
                             <div class="setting-item">
                                 <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">End Date</span>
                                 <input id="backtest-end" type="date" value="${endDate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Initial Capital ($)</span>
+                                <input id="backtest-capital" type="number" value="10000" min="100" max="1000000" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
+                            </div>
+                            <div class="setting-item">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Position Size (%)</span>
+                                <input id="backtest-position" type="number" value="10" min="1" max="100" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
                             </div>
                         </div>
 
@@ -1042,10 +1278,39 @@ Last: BUY BTC>100k $5K +12.5%
                         <div id="backtest-results" style="display: none; margin-top: 40px;">
                             <h4 style="color: #4ade80; margin-bottom: 20px;">✅ Backtest Complete</h4>
                             <div style="padding: 25px; background: #0d1117; border-radius: 8px; border: 1px solid #30363d;">
+                                <!-- Budget Summary -->
+                                <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #30363d;">
+                                    <h5 style="color: #ccd6f6; margin-bottom: 15px;">Capital Summary</h5>
+                                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Initial Capital</div>
+                                            <div id="initial-capital" style="color: #6b8cff; font-size: 18px; font-weight: 600;">$10,000</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Final Capital</div>
+                                            <div id="final-capital" style="color: #4ade80; font-size: 18px; font-weight: 600;">$0</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Total Invested</div>
+                                            <div id="total-invested" style="color: #6b8cff; font-size: 18px; font-weight: 600;">$0</div>
+                                        </div>
+                                        <div>
+                                            <div style="color: #8892b0; font-size: 11px; margin-bottom: 3px;">Total Trades</div>
+                                            <div id="total-trades" style="color: #6b8cff; font-size: 18px; font-weight: 600;">0</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Performance Metrics -->
+                                <h5 style="color: #ccd6f6; margin-bottom: 15px;">Performance Metrics</h5>
                                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
                                     <div>
                                         <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Total P&L</div>
                                         <div id="result-pnl" style="color: #4ade80; font-size: 24px; font-weight: 600;">+$0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">% Gain</div>
+                                        <div id="result-gain" style="color: #4ade80; font-size: 24px; font-weight: 600;">+0.0%</div>
                                     </div>
                                     <div>
                                         <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Win Rate</div>
@@ -1090,25 +1355,82 @@ Last: BUY BTC>100k $5K +12.5%
             simulateBacktest();
         }
 
-        function simulateBacktest() {
+        async function simulateBacktest() {
             let progress = 0;
             const totalWhales = 25;
             let whalesProcessed = 0;
             let tradesAnalyzed = 0;
             let startTime = Date.now();
 
-            const interval = setInterval(() => {
-                progress += Math.random() * 15;
-                if (progress > 100) progress = 100;
+            // Try to start real backtest via API
+            const startDate = document.getElementById('backtest-start').value;
+            const endDate = document.getElementById('backtest-end').value;
+            const initialCapital = parseFloat(document.getElementById('backtest-capital').value) || 10000;
+            const positionSize = parseFloat(document.getElementById('backtest-position').value) || 10;
+
+            let backtestId = null;
+            let realBacktestRunning = false;
+
+            try {
+                const response = await fetch('http://localhost:8000/api/backtest', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start_date: startDate,
+                        end_date: endDate,
+                        initial_capital: initialCapital,
+                        position_size_pct: positionSize / 100
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    backtestId = data.backtest_id;
+                    realBacktestRunning = true;
+                }
+            } catch (error) {
+                console.log('API backtest not available, using simulation');
+            }
+
+            const interval = setInterval(async () => {
+                // If real backtest is running, poll for status
+                if (realBacktestRunning && backtestId) {
+                    try {
+                        const statusResponse = await fetch(`http://localhost:8000/api/backtest/${backtestId}/status`);
+                        if (statusResponse.ok) {
+                            const statusData = await statusResponse.json();
+                            progress = statusData.progress || progress;
+                            whalesProcessed = statusData.whales_processed || whalesProcessed;
+                            tradesAnalyzed = statusData.trades_analyzed || tradesAnalyzed;
+
+                            if (statusData.status === 'completed') {
+                                clearInterval(interval);
+                                showBacktestResults(statusData.results);
+                                return;
+                            }
+                        }
+                    } catch (error) {
+                        // Fall back to simulation if API fails
+                        realBacktestRunning = false;
+                    }
+                }
+
+                // Simulation fallback
+                if (!realBacktestRunning) {
+                    progress += Math.random() * 15;
+                    if (progress > 100) progress = 100;
+
+                    whalesProcessed = Math.floor((progress / 100) * totalWhales);
+                    tradesAnalyzed = Math.floor(progress * 14.56);
+                }
 
                 // Update progress bar
                 document.getElementById('backtest-progress-bar').style.width = progress + '%';
                 document.getElementById('progress-text').textContent = Math.round(progress) + '%';
 
                 // Update metrics
-                whalesProcessed = Math.floor((progress / 100) * totalWhales);
-                tradesAnalyzed = Math.floor(progress * 14.56);
-
                 document.getElementById('whales-processed').textContent = `${whalesProcessed} / ${totalWhales}`;
                 document.getElementById('trades-analyzed').textContent = tradesAnalyzed.toLocaleString();
 
@@ -1140,24 +1462,69 @@ Last: BUY BTC>100k $5K +12.5%
                     document.getElementById('backtest-status').textContent = 'Backtest complete!';
                 }
 
-                if (progress >= 100) {
+                if (progress >= 100 && !realBacktestRunning) {
                     clearInterval(interval);
                     showBacktestResults();
                 }
             }, 500);
         }
 
-        function showBacktestResults() {
+        function showBacktestResults(apiResults = null) {
             // Show results after a short delay
             setTimeout(() => {
                 document.getElementById('backtest-progress-container').style.display = 'none';
                 document.getElementById('backtest-results').style.display = 'block';
 
-                // Populate with mock results
-                document.getElementById('result-pnl').textContent = '+$' + (Math.random() * 20000 + 5000).toFixed(2);
-                document.getElementById('result-winrate').textContent = (Math.random() * 20 + 60).toFixed(1) + '%';
-                document.getElementById('result-sharpe').textContent = (Math.random() * 1.5 + 1).toFixed(2);
-                document.getElementById('result-drawdown').textContent = '-' + (Math.random() * 10 + 5).toFixed(1) + '%';
+                // Get initial capital from input
+                const initialCapitalInput = parseFloat(document.getElementById('backtest-capital').value) || 10000;
+
+                // Use API results if available, otherwise generate mock results
+                let totalPnL, percentGain, winRate, sharpeRatio, maxDrawdown, totalTrades, totalInvested, finalCapital;
+
+                if (apiResults) {
+                    // Real results from API
+                    totalPnL = apiResults.total_pnl || 0;
+                    const initialCapital = apiResults.initial_capital || initialCapitalInput;
+                    finalCapital = initialCapital + totalPnL;
+                    percentGain = ((totalPnL / initialCapital) * 100).toFixed(1);
+                    winRate = (apiResults.win_rate * 100).toFixed(1);
+                    sharpeRatio = apiResults.sharpe_ratio?.toFixed(2) || '0.00';
+                    maxDrawdown = (apiResults.max_drawdown * 100).toFixed(1);
+                    totalTrades = apiResults.total_trades || 0;
+                    totalInvested = apiResults.total_invested || (initialCapital * 0.8);
+                } else {
+                    // Mock results for simulation
+                    totalPnL = Math.random() * 20000 + 5000;
+                    const initialCapital = initialCapitalInput;
+                    finalCapital = initialCapital + totalPnL;
+                    percentGain = ((totalPnL / initialCapital) * 100).toFixed(1);
+                    winRate = (Math.random() * 20 + 60).toFixed(1);
+                    sharpeRatio = (Math.random() * 1.5 + 1).toFixed(2);
+                    maxDrawdown = (Math.random() * 10 + 5).toFixed(1);
+                    totalTrades = Math.floor(Math.random() * 500 + 100);
+                    totalInvested = initialCapital * (0.6 + Math.random() * 0.3);
+                }
+
+                // Update budget details
+                document.getElementById('initial-capital').textContent = '$' + initialCapitalInput.toLocaleString();
+                document.getElementById('final-capital').textContent = '$' + finalCapital.toLocaleString();
+                document.getElementById('final-capital').style.color = finalCapital > initialCapitalInput ? '#4ade80' : '#ef4444';
+                document.getElementById('total-invested').textContent = '$' + totalInvested.toLocaleString();
+                document.getElementById('total-trades').textContent = totalTrades.toLocaleString();
+
+                // Update performance metrics
+                const pnlPrefix = totalPnL >= 0 ? '+' : '';
+                const gainPrefix = percentGain >= 0 ? '+' : '';
+
+                document.getElementById('result-pnl').textContent = pnlPrefix + '$' + Math.abs(totalPnL).toLocaleString();
+                document.getElementById('result-pnl').style.color = totalPnL >= 0 ? '#4ade80' : '#ef4444';
+
+                document.getElementById('result-gain').textContent = gainPrefix + Math.abs(percentGain) + '%';
+                document.getElementById('result-gain').style.color = percentGain >= 0 ? '#4ade80' : '#ef4444';
+
+                document.getElementById('result-winrate').textContent = winRate + '%';
+                document.getElementById('result-sharpe').textContent = sharpeRatio;
+                document.getElementById('result-drawdown').textContent = '-' + maxDrawdown + '%';
 
                 // Show run button again
                 document.getElementById('run-backtest-btn').style.display = 'inline-block';

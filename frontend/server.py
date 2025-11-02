@@ -16,8 +16,12 @@ class SettingsHandler(SimpleHTTPRequestHandler):
         if self.path == '/api/settings':
             self.send_settings()
         elif self.path == '/':
-            # Serve index.html as the root
-            self.path = '/index.html'
+            # Serve unified_dashboard.html as the root
+            self.path = '/unified_dashboard.html'
+            super().do_GET()
+        elif self.path == '/index':
+            # Legacy index page redirect
+            self.path = '/unified_dashboard.html'
             super().do_GET()
         else:
             # Serve static files
@@ -151,12 +155,16 @@ def run_server(port=8888):
 
     print(f"""
     ════════════════════════════════════════════════════════
-    🚀 Settings Frontend Server Started
+    🚀 WhaleTracker Unified Dashboard Server Started
     ════════════════════════════════════════════════════════
 
-    Access the settings interface at:
+    Main Dashboard:
+    → http://localhost:{port}/
 
-    → http://localhost:{port}/settings.html
+    Available Pages:
+    • http://localhost:{port}/                      - Unified Dashboard (default)
+    • http://localhost:{port}/settings.html         - Settings Configuration
+    • http://localhost:{port}/index.html            - Legacy Home Page
 
     API endpoints:
     • GET  /api/settings - Get current settings
