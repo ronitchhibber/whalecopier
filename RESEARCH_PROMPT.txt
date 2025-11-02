@@ -1,0 +1,723 @@
+================================================================================
+POLYMARKET WHALE COPY TRADING - DEEP RESEARCH PROMPT
+================================================================================
+Purpose: Guide comprehensive research into Polymarket API, whale behavior,
+         trading mechanics, and edge detection for production trading system
+Generated: November 2, 2025
+
+================================================================================
+RESEARCH OBJECTIVE
+================================================================================
+
+Conduct deep technical research to answer critical questions needed for
+building a production-grade whale copy trading system. Focus on:
+
+1. Polymarket CLOB API mechanics and authentication
+2. Whale trading patterns and behavior
+3. Market microstructure and liquidity
+4. Edge detection and decay mechanisms
+5. Risk management and position sizing
+6. Real-time data ingestion and latency
+7. Order execution and slippage
+
+================================================================================
+SECTION 1: POLYMARKET CLOB API DEEP DIVE
+================================================================================
+
+Research Questions:
+-------------------
+
+1.1 AUTHENTICATION & AUTHORIZATION
+   Q: How does the two-layer (L1 + L2) authentication work in detail?
+   Focus Areas:
+   - What is the exact EIP-712 signature format for API credential derivation?
+   - How long do L2 API credentials remain valid?
+   - Can multiple API credentials be derived from the same private key?
+   - What happens if credentials expire during trading?
+   - Are there rate limits per credential or per wallet address?
+
+   Resources:
+   - https://docs.polymarket.com (API docs)
+   - py-clob-client source code (authentication module)
+   - EIP-712 specification
+   - Polymarket Discord (developer channel)
+
+1.2 WEBSOCKET REAL-TIME FEED
+   Q: What is the exact WebSocket protocol and message format?
+   Focus Areas:
+   - What are the available WebSocket channels? (trades, books, markets, etc.)
+   - How do you subscribe to trades for a specific wallet address?
+   - What is the message format for incoming trade events?
+   - What is the typical latency from trade execution to WebSocket delivery?
+   - How often do disconnections occur? What is the reconnection strategy?
+   - Is there a heartbeat/ping-pong mechanism?
+
+   Resources:
+   - Polymarket CLOB WebSocket docs
+   - py-clob-client WebSocket implementation
+   - Test WebSocket connection and measure latency
+   - Monitor disconnection frequency over 24 hours
+
+1.3 ORDER BOOK MECHANICS
+   Q: How does the order book work and how can we estimate slippage?
+   Focus Areas:
+   - How is the order book structured? (price levels, size at each level)
+   - How frequently does the book update? (every trade? time-based?)
+   - Can you query historical order book snapshots?
+   - How do you calculate market impact for a given order size?
+   - What is the typical spread in active markets?
+   - How deep is liquidity in typical markets? (size at best bid/ask)
+
+   Resources:
+   - CLOB API: GET /book endpoint
+   - Test order book queries for various markets
+   - Analyze 100 markets to understand typical depth
+   - Compare book depth across high vs low volume markets
+
+1.4 ORDER EXECUTION
+   Q: What are the order types and execution guarantees?
+   Focus Areas:
+   - What order types are supported? (limit, market, FOK, IOC?)
+   - How long do limit orders remain open? (GTC, GTD?)
+   - What is the typical fill time for market orders?
+   - What is the typical fill rate for limit orders at various spreads?
+   - Can orders be partially filled?
+   - How do you handle order rejections? (insufficient balance, price too far, etc.)
+
+   Resources:
+   - CLOB API: POST /order endpoint
+   - py-clob-client order placement methods
+   - Test 100 orders (50 limit, 50 market) and measure fill rates/times
+   - Analyze rejection reasons
+
+1.5 RATE LIMITS & QUOTAS
+   Q: What are the exact rate limits and how do they work?
+   Focus Areas:
+   - What is the rate limit for REST API calls? (per second, per minute?)
+   - What is the rate limit for WebSocket subscriptions?
+   - What is the rate limit for order placement?
+   - Are there separate limits for read vs write operations?
+   - What happens when you exceed rate limits? (HTTP 429? ban?)
+   - How long do rate limit bans last?
+
+   Resources:
+   - Polymarket API docs (rate limits section)
+   - Test rate limits by sending rapid requests
+   - Measure response headers (X-RateLimit-Remaining, etc.)
+   - Contact Polymarket support for institutional rate limits
+
+================================================================================
+SECTION 2: WHALE BEHAVIOR ANALYSIS
+================================================================================
+
+Research Questions:
+-------------------
+
+2.1 WHALE IDENTIFICATION
+   Q: What characteristics define a profitable "whale" trader?
+   Focus Areas:
+   - What is the typical trade volume for whales? (>$10k/day? >$100k/day?)
+   - What is the distribution of win rates? (median, p25, p75, p95)
+   - What is the distribution of Sharpe ratios?
+   - How many trades do whales make per day/week/month?
+   - Are there whale "archetypes"? (high-freq, swing, event-driven, etc.)
+   - Do whales specialize in specific topics? (politics, sports, etc.)
+
+   Resources:
+   - Query current database (908 trades from 50+ whales)
+   - Polymarket leaderboard API (if available)
+   - Blockchain analysis (Polygon transactions)
+   - Manual review of top 20 whales
+
+2.2 WHALE LIFECYCLE
+   Q: How long does a whale's edge persist?
+   Focus Areas:
+   - What is the typical lifecycle? (discovery → hot streak → decline)
+   - How long is the average "hot streak"? (days, weeks, months)
+   - What causes edge decay? (market learns, whale changes strategy, etc.)
+   - Can edge be regained after decay?
+   - Are there leading indicators of edge decay? (win rate drop, drawdown, etc.)
+
+   Resources:
+   - Analyze historical performance of 100+ whales over 6-12 months
+   - Calculate rolling 30-day Sharpe ratios
+   - Identify inflection points (peak → decline)
+   - Interview whale traders (if possible)
+
+2.3 WHALE TRADING PATTERNS
+   Q: What patterns do whales exhibit in their trading?
+   Focus Areas:
+   - What time of day do whales trade most? (UTC distribution)
+   - How quickly do whales react to news/events? (minutes, hours?)
+   - Do whales scale position sizes based on conviction?
+   - Do whales trade correlated markets together?
+   - Do whales hedge positions?
+   - What is the typical holding period? (hours, days, weeks)
+
+   Resources:
+   - Analyze 1000+ whale trades
+   - Cluster analysis to identify patterns
+   - Time series analysis (hourly/daily trading volume)
+   - Correlation analysis (do whales trade related markets together?)
+
+2.4 WHALE EDGE SOURCES
+   Q: Where does whale edge come from?
+   Focus Areas:
+   - Information edge? (access to private info, faster news consumption)
+   - Analytical edge? (better models, deeper research)
+   - Execution edge? (faster execution, lower slippage)
+   - Behavioral edge? (exploit market inefficiencies, crowd psychology)
+   - Capital edge? (can move markets, absorb larger positions)
+
+   Resources:
+   - Compare whale trades to market events (news, Twitter, etc.)
+   - Measure time delta between event and whale trade
+   - Analyze whale trades vs public prediction accuracy
+   - Identify markets where whales outperform most
+
+2.5 WHALE CONFLICTS & CONSENSUS
+   Q: What happens when whales disagree?
+   Focus Areas:
+   - How often do 2+ whales take opposite sides of a market?
+   - When whales agree (same side), what is the win rate?
+   - When whales disagree (opposite sides), what is the outcome?
+   - Should we skip trades when whales conflict?
+   - Should we increase size when 3+ whales agree?
+   - What is the optimal weighting when multiple whales trade same market?
+
+   Resources:
+   - Identify 100+ cases of whale conflicts
+   - Identify 100+ cases of whale consensus (3+ same side)
+   - Compare win rates: solo whale vs consensus vs conflict
+   - Backtest various conflict resolution strategies
+
+================================================================================
+SECTION 3: MARKET MICROSTRUCTURE
+================================================================================
+
+Research Questions:
+-------------------
+
+3.1 LIQUIDITY DYNAMICS
+   Q: How does liquidity behave in Polymarket?
+   Focus Areas:
+   - What is the typical order book depth? ($100, $1k, $10k, $100k at best bid/ask?)
+   - How does liquidity vary by market? (presidential election vs niche event)
+   - How does liquidity change over time? (event approaching vs far away)
+   - What happens to liquidity after a whale trade? (does it disappear?)
+   - Are there liquidity providers (market makers)? Who are they?
+   - What is the typical bid-ask spread? (0.1%, 0.5%, 1%, 5%?)
+
+   Resources:
+   - Query order book for 500+ markets
+   - Track book depth over time (hourly snapshots)
+   - Measure liquidity before/after whale trades
+   - Identify patterns in liquidity cycles
+
+3.2 PRICE DISCOVERY
+   Q: How quickly do prices adjust to new information?
+   Focus Areas:
+   - What is the typical time from news event to price movement?
+   - How long does it take for prices to reach equilibrium after whale trade?
+   - Are there predictable price patterns after whale trades?
+   - Do prices revert after whale trades (temporary impact vs permanent)?
+   - What is the half-life of market inefficiency?
+
+   Resources:
+   - Track price movements after 100+ whale trades
+   - Measure time to equilibrium
+   - Compare temporary vs permanent price impact
+   - Correlate with market volume and liquidity
+
+3.3 MARKET EFFICIENCY
+   Q: How efficient are Polymarket prediction markets?
+   Focus Areas:
+   - How accurate are market prices compared to actual outcomes?
+   - Which markets are most efficient? (high volume, liquid)
+   - Which markets are least efficient? (low volume, niche)
+   - How quickly does inefficiency get arbitraged away?
+   - Are there systematic biases? (favorite-longshot bias, recency bias, etc.)
+
+   Resources:
+   - Collect 1000+ resolved markets with final outcomes
+   - Calculate calibration (predicted probability vs actual frequency)
+   - Identify market types with largest calibration errors
+   - Test for systematic biases
+
+3.4 SLIPPAGE & MARKET IMPACT
+   Q: How much slippage should we expect?
+   Focus Areas:
+   - What is the typical slippage for orders of various sizes? ($100, $500, $1k, $5k)
+   - How does slippage vary by market liquidity?
+   - What is the relationship between order size and market impact?
+   - How long does market impact persist? (seconds, minutes, hours)
+   - Can we reduce slippage by splitting orders (TWAP, VWAP)?
+
+   Resources:
+   - Execute test orders of various sizes (paper trading)
+   - Measure slippage: (execution_price - expected_price) / expected_price
+   - Build slippage model as function of order size and book depth
+   - Test order splitting strategies
+
+3.5 FEES & COSTS
+   Q: What are the total costs of trading?
+   Focus Areas:
+   - What are the trading fees? (maker fee, taker fee)
+   - Are there withdrawal fees?
+   - Are there gas fees? (Polygon network)
+   - What is the typical total cost per trade? (fees + slippage + impact)
+   - How do costs scale with trade size?
+
+   Resources:
+   - Polymarket fee schedule
+   - Measure actual fees on test trades
+   - Calculate total cost (fees + slippage) per trade
+   - Determine minimum profitable edge to overcome costs
+
+================================================================================
+SECTION 4: EDGE DETECTION & STRATEGY
+================================================================================
+
+Research Questions:
+-------------------
+
+4.1 EDGE DEFINITION & MEASUREMENT
+   Q: How do we precisely define and measure "edge"?
+   Focus Areas:
+   - What is the formula for edge? E = (win_rate * avg_win) - (loss_rate * avg_loss)?
+   - What is the minimum edge required to be profitable? (after fees/slippage)
+   - How do we measure edge in real-time? (rolling window, EWMA?)
+   - What is the confidence interval around edge estimates?
+   - How many trades needed for statistical significance?
+
+   Resources:
+   - Statistical analysis textbooks (hypothesis testing)
+   - Calculate edge for each whale in database
+   - Simulate edge estimation with various sample sizes
+   - Determine minimum sample size for 95% confidence
+
+4.2 EDGE DECAY DETECTION
+   Q: How do we detect when edge is decaying?
+   Focus Areas:
+   - What statistical methods detect regime changes? (CUSUM, changepoint detection)
+   - How sensitive should the detector be? (false positive vs false negative tradeoff)
+   - How quickly can we detect decay? (7 days, 14 days, 30 days?)
+   - What leading indicators predict decay? (drawdown, consecutive losses, etc.)
+   - How do we distinguish temporary slump from permanent decay?
+
+   Resources:
+   - CUSUM algorithm implementation
+   - Changepoint detection libraries (Python: ruptures, changepoint)
+   - Backtest decay detection on historical whale data
+   - Measure detection speed vs false positive rate
+
+4.3 POSITION SIZING
+   Q: What is the optimal position sizing strategy?
+   Focus Areas:
+   - Should we use Kelly Criterion? Full Kelly or fractional Kelly?
+   - How do we estimate Kelly parameters? (edge, probability of win)
+   - How do we handle uncertainty in edge estimates? (Bayesian Kelly)
+   - Should we use fixed fractional betting instead? (e.g., 2% of bankroll)
+   - How do we account for correlation across positions?
+
+   Resources:
+   - Kelly Criterion papers and implementations
+   - Backtest various position sizing strategies
+   - Compare: fixed size, Kelly, fractional Kelly, volatility-scaled
+   - Measure Sharpe ratio and max drawdown for each
+
+4.4 RISK MANAGEMENT
+   Q: What risk management rules should we implement?
+   Focus Areas:
+   - What should the daily loss limit be? ($500, $1000, 2% of capital?)
+   - What should the max drawdown trigger be? (10%, 15%, 20%?)
+   - Should we use stop-losses per position? (10%, 20%, 30%?)
+   - Should we use take-profits? (50%, 100%, let winners run?)
+   - How do we manage correlated positions? (max 3 in same topic?)
+   - Should we scale down after losses? (martingale, anti-martingale?)
+
+   Resources:
+   - Risk management literature (Van Tharp, etc.)
+   - Backtest various risk rules
+   - Measure impact on Sharpe ratio and max drawdown
+   - Optimize parameters (grid search or genetic algorithm)
+
+4.5 PORTFOLIO CONSTRUCTION
+   Q: How should we construct the multi-whale portfolio?
+   Focus Areas:
+   - How many whales should we follow? (10, 20, 50, 100?)
+   - How should we allocate capital across whales? (equal weight, quality-weighted?)
+   - Should we concentrate in top whales or diversify broadly?
+   - How do we handle whale correlation? (are whales trading same markets?)
+   - Should we rebalance allocations? (daily, weekly, monthly?)
+
+   Resources:
+   - Portfolio theory (Markowitz, etc.)
+   - Calculate whale correlation matrix
+   - Backtest: equal weight vs quality-weighted vs concentration
+   - Measure portfolio Sharpe ratio and diversification benefit
+
+================================================================================
+SECTION 5: TECHNICAL IMPLEMENTATION
+================================================================================
+
+Research Questions:
+-------------------
+
+5.1 LATENCY OPTIMIZATION
+   Q: How do we minimize latency from whale trade to our execution?
+   Focus Areas:
+   - What is the baseline latency? (WebSocket delivery + our processing + order submission)
+   - Where are the bottlenecks? (network, database writes, decision logic?)
+   - Should we co-locate servers near Polymarket? (AWS region?)
+   - Should we use faster languages? (Go, Rust vs Python)
+   - Can we pre-compute decisions? (pre-fetch market data, pre-calculate sizes)
+
+   Resources:
+   - Measure latency at each stage (WebSocket → DB → Decision → Order)
+   - Profile Python code (cProfile, line_profiler)
+   - Test from various AWS regions (us-east-1, us-west-2, eu-west-1)
+   - Benchmark Python vs Go for critical path
+
+5.2 DATABASE OPTIMIZATION
+   Q: How do we optimize database for high-frequency reads/writes?
+   Focus Areas:
+   - What indexes are needed? (trades.timestamp, trades.trader_address, etc.)
+   - Should we use partitioning? (partition trades by month)
+   - Should we use read replicas? (separate read and write databases)
+   - Should we cache hot data in Redis? (whale scores, market prices)
+   - How do we handle write contention? (connection pooling)
+
+   Resources:
+   - PostgreSQL query performance docs
+   - Run EXPLAIN ANALYZE on slow queries
+   - Add indexes and measure improvement
+   - Test TimescaleDB for time-series data
+
+5.3 REAL-TIME PROCESSING
+   Q: How do we process trade events in real-time?
+   Focus Areas:
+   - Should we use event streaming? (Kafka, RabbitMQ, Redis Streams)
+   - How do we ensure exactly-once processing? (no duplicates)
+   - How do we handle backpressure? (events arriving faster than we can process)
+   - How do we handle failures? (retry logic, dead letter queue)
+   - Should we use async/await for concurrency?
+
+   Resources:
+   - Event streaming architecture patterns
+   - Kafka vs RabbitMQ vs Redis Streams comparison
+   - Implement prototype with asyncio (Python)
+   - Measure throughput (events per second)
+
+5.4 TESTING & SIMULATION
+   Q: How do we test the system without risking real money?
+   Focus Areas:
+   - Can we paper trade (simulate trades without execution)?
+   - Can we replay historical trades (backtesting)?
+   - How do we simulate realistic fills? (slippage, partial fills, rejections)
+   - How do we simulate WebSocket disconnections? (chaos testing)
+   - How do we validate correctness? (unit tests, integration tests)
+
+   Resources:
+   - Build paper trading mode (all logic, no actual orders)
+   - Build backtesting engine with realistic simulation
+   - Implement chaos engineering (randomly kill services)
+   - Achieve 80%+ code coverage with tests
+
+5.5 MONITORING & OBSERVABILITY
+   Q: How do we monitor the system in production?
+   Focus Areas:
+   - What metrics should we track? (latency, fill rate, P&L, errors)
+   - What alerts should we set? (WebSocket disconnect, loss limit, errors)
+   - How do we debug issues? (structured logging, distributed tracing)
+   - How do we visualize performance? (Grafana dashboards)
+   - How do we handle incidents? (runbooks, on-call rotation)
+
+   Resources:
+   - Prometheus + Grafana setup
+   - OpenTelemetry for distributed tracing
+   - Structured logging (JSON format)
+   - Build alerting rules (PagerDuty, Opsgenie)
+
+================================================================================
+SECTION 6: COMPETITIVE ANALYSIS
+================================================================================
+
+Research Questions:
+-------------------
+
+6.1 EXISTING SOLUTIONS
+   Q: Are there existing whale copy trading systems?
+   Focus Areas:
+   - What copy trading systems exist for Polymarket?
+   - What features do they offer?
+   - What are their limitations?
+   - What can we learn from them?
+   - What gaps can we fill?
+
+   Resources:
+   - Search GitHub for "polymarket copy" "polymarket whale"
+   - Search Twitter for whale tracking services
+   - Join Polymarket Discord and ask community
+   - Reverse engineer any public tools
+
+6.2 MARKET PARTICIPANTS
+   Q: Who are our competitors and how do they operate?
+   Focus Areas:
+   - Who are the top traders? (whales, market makers, arbitrageurs)
+   - Do they use bots or trade manually?
+   - What strategies do they use? (fundamental, technical, arbitrage)
+   - How sophisticated are they?
+   - Are we competing with them or following them?
+
+   Resources:
+   - Analyze top leaderboard traders
+   - Monitor their trading patterns
+   - Look for bot-like behavior (regular timing, instant responses)
+   - Study their market selection and sizing
+
+6.3 REGULATORY LANDSCAPE
+   Q: Are there regulatory constraints?
+   Focus Areas:
+   - Is prediction market trading legal in our jurisdiction?
+   - Are there KYC/AML requirements?
+   - Are there tax reporting requirements?
+   - Are there trading limits or restrictions?
+   - What are the legal risks?
+
+   Resources:
+   - Polymarket terms of service
+   - Legal research on prediction markets (US, EU, etc.)
+   - Consult with lawyer if deploying with real money
+   - Understand tax implications (capital gains, income, etc.)
+
+================================================================================
+SECTION 7: OPEN RESEARCH QUESTIONS
+================================================================================
+
+Advanced Topics for Future Research:
+-------------------------------------
+
+7.1 Machine Learning for Whale Selection
+   - Can we predict which whales will be profitable?
+   - Features: historical performance, market selection, timing, etc.
+   - Models: XGBoost, LSTM, Transformer
+   - Evaluation: out-of-sample Sharpe ratio
+
+7.2 Sentiment Analysis
+   - Can we extract signals from Twitter, Reddit, news?
+   - Combine whale trades with sentiment for better edge?
+   - Real-time sentiment scoring (positive, negative, neutral)
+   - Correlation between sentiment and whale trades
+
+7.3 Regime Detection
+   - Can we detect market regimes? (trending, mean-reverting, volatile)
+   - Adapt strategy based on regime
+   - Use Hidden Markov Models or clustering
+   - Different whale allocation per regime
+
+7.4 Multi-Market Arbitrage
+   - Are there arbitrage opportunities across markets?
+   - Same event, different markets (Polymarket vs PredictIt vs Kalshi)
+   - Cross-market hedging
+   - Statistical arbitrage
+
+7.5 Market Making
+   - Can we provide liquidity and earn fees?
+   - Quote spreads around fair value
+   - Manage inventory risk
+   - Earn market maker rebates (if available)
+
+7.6 High-Frequency Trading
+   - Can we profit from sub-second opportunities?
+   - Front-run large whale orders?
+   - React to news faster than market?
+   - Requires <100ms latency end-to-end
+
+================================================================================
+RESEARCH DELIVERABLES
+================================================================================
+
+Expected Outputs:
+-----------------
+
+1. POLYMARKET API SPECIFICATION
+   - Complete authentication flow documentation
+   - WebSocket protocol specification
+   - Rate limits and quotas
+   - Order execution mechanics
+   - Error handling guide
+
+2. WHALE BEHAVIOR REPORT
+   - Whale identification criteria
+   - Whale lifecycle analysis
+   - Trading pattern taxonomy
+   - Edge source attribution
+   - Conflict resolution strategy
+
+3. MARKET MICROSTRUCTURE STUDY
+   - Liquidity analysis across 500+ markets
+   - Price discovery timescales
+   - Efficiency benchmarks
+   - Slippage model (size → impact)
+   - Fee structure breakdown
+
+4. EDGE DETECTION FRAMEWORK
+   - Edge definition and formula
+   - Real-time measurement method
+   - Decay detection algorithm (CUSUM)
+   - Statistical significance testing
+   - Optimal parameters (window size, threshold)
+
+5. STRATEGY BACKTEST RESULTS
+   - Position sizing comparison (Kelly vs fixed)
+   - Risk management optimization
+   - Portfolio construction analysis
+   - Parameter sensitivity analysis
+   - Out-of-sample performance
+
+6. TECHNICAL ARCHITECTURE SPEC
+   - Latency benchmarks and optimizations
+   - Database schema and indexes
+   - Real-time processing pipeline
+   - Testing and simulation framework
+   - Monitoring and alerting setup
+
+7. COMPETITIVE ANALYSIS REPORT
+   - Existing solutions survey
+   - Market participant analysis
+   - Regulatory assessment
+   - Unique value proposition
+
+================================================================================
+RESEARCH TIMELINE
+================================================================================
+
+Week 1: Polymarket API Deep Dive
+- Set up test environment
+- Authenticate and test all endpoints
+- Measure latency and rate limits
+- Document findings
+
+Week 2: Whale Behavior Analysis
+- Extract and clean database trades (908 trades)
+- Calculate performance metrics per whale
+- Identify patterns and archetypes
+- Build whale scoring model
+
+Week 3: Market Microstructure
+- Query order book for 500+ markets
+- Analyze liquidity dynamics
+- Test order execution (paper trading)
+- Build slippage model
+
+Week 4: Edge Detection & Strategy
+- Define edge measurement framework
+- Implement CUSUM decay detection
+- Backtest position sizing strategies
+- Optimize risk management parameters
+
+Week 5-6: Technical Implementation
+- Profile and optimize critical path
+- Set up database indexes and partitioning
+- Implement event streaming pipeline
+- Build monitoring and alerting
+
+Week 7: Competitive Analysis
+- Survey existing solutions
+- Analyze top traders
+- Research regulatory landscape
+- Identify unique advantages
+
+Week 8: Integration & Documentation
+- Compile all findings
+- Write comprehensive research report
+- Present to stakeholders
+- Update roadmap based on findings
+
+================================================================================
+SUCCESS METRICS FOR RESEARCH
+================================================================================
+
+Research Quality:
+- 100% of critical questions answered
+- All findings backed by data (not speculation)
+- Reproducible analysis (code + data shared)
+- Peer review by domain experts
+
+Actionability:
+- Clear recommendations for implementation
+- Prioritized list of features/optimizations
+- Risk assessment for each strategy
+- Go/no-go decision criteria
+
+Impact:
+- Research findings improve backtest Sharpe by >20%
+- Reduce latency by >50%
+- Increase edge detection speed by >2x
+- Prevent at least 3 major production issues
+
+================================================================================
+TOOLS & RESOURCES
+================================================================================
+
+Required Access:
+- Polymarket account with funded wallet ($1000 for testing)
+- Polygon RPC endpoint (Alchemy, Infura)
+- AWS account (for co-location testing)
+- PostgreSQL database (existing)
+- Redis instance (existing)
+
+Python Libraries:
+- py-clob-client (Polymarket SDK)
+- web3.py (blockchain interaction)
+- pandas, numpy (data analysis)
+- scipy, statsmodels (statistical tests)
+- matplotlib, seaborn (visualization)
+- jupyter (notebooks for exploration)
+
+External APIs:
+- Polymarket CLOB API (trading)
+- Polymarket Gamma API (market data)
+- Polygon blockchain (on-chain data)
+- Twitter API (sentiment, optional)
+
+Documentation:
+- https://docs.polymarket.com
+- https://github.com/Polymarket (official repos)
+- Polymarket Discord (community)
+- Academic papers on prediction markets
+
+================================================================================
+NOTES
+================================================================================
+
+Ethical Considerations:
+- Ensure trading is legal in your jurisdiction
+- Respect Polymarket terms of service
+- Do not manipulate markets
+- Handle user funds responsibly (if applicable)
+
+Research Integrity:
+- Avoid overfitting to historical data
+- Use out-of-sample testing
+- Be conservative in edge estimates
+- Document all assumptions
+- Acknowledge uncertainties
+
+Risk Management:
+- Start with paper trading (no real money)
+- Test thoroughly before live trading
+- Use small amounts initially ($1k → $10k → $100k)
+- Implement circuit breakers and loss limits
+- Monitor continuously
+
+================================================================================
+END OF RESEARCH PROMPT
+================================================================================
+
+This prompt should be used to guide comprehensive research before proceeding
+with production implementation. Update as new questions arise.
+
+Last Updated: November 2, 2025
+Version: 1.0.0
