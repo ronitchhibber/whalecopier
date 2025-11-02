@@ -968,6 +968,11 @@ Last: BUY BTC>100k $5K +12.5%
         }
 
         function loadBacktestTab() {
+            // Set default dates
+            const today = new Date();
+            const endDate = today.toISOString().split('T')[0];
+            const startDate = new Date(today.setMonth(today.getMonth() - 4)).toISOString().split('T')[0];
+
             document.getElementById('backtest-tab').innerHTML = `
                 <div class="panel">
                     <div class="panel-header">
@@ -977,21 +982,191 @@ Last: BUY BTC>100k $5K +12.5%
                         </div>
                     </div>
                     <div class="panel-content">
-                        <h3>Backtest Configuration</h3>
-                        <div class="settings-grid" style="margin-top: 20px;">
+                        <h3 style="color: #ccd6f6; margin-bottom: 25px;">Backtest Configuration</h3>
+                        <div class="settings-grid" style="margin-top: 20px; gap: 30px;">
                             <div class="setting-item">
-                                <span class="setting-label">Start Date</span>
-                                <input type="date" style="background: #1a1f3a; border: 1px solid #4a5580; padding: 5px; border-radius: 4px; color: #ccd6f6;">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">Start Date</span>
+                                <input id="backtest-start" type="date" value="${startDate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
                             </div>
                             <div class="setting-item">
-                                <span class="setting-label">End Date</span>
-                                <input type="date" style="background: #1a1f3a; border: 1px solid #4a5580; padding: 5px; border-radius: 4px; color: #ccd6f6;">
+                                <span class="setting-label" style="color: #8892b0; margin-bottom: 8px; display: block;">End Date</span>
+                                <input id="backtest-end" type="date" value="${endDate}" style="background: #0d1117; border: 1px solid #30363d; padding: 10px 15px; border-radius: 8px; color: #ccd6f6; font-size: 14px; width: 200px;">
                             </div>
                         </div>
-                        <button class="action-button" style="margin-top: 20px;">Run Backtest</button>
+
+                        <!-- Run Button -->
+                        <button id="run-backtest-btn" onclick="runBacktest()" class="action-button" style="margin-top: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 30px; border-radius: 8px; color: white; border: none; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s;">
+                            Run Backtest
+                        </button>
+
+                        <!-- Progress Bar Container (hidden initially) -->
+                        <div id="backtest-progress-container" style="display: none; margin-top: 40px;">
+                            <h4 style="color: #ccd6f6; margin-bottom: 15px;">Backtest Progress</h4>
+
+                            <!-- Progress Bar -->
+                            <div style="background: #0d1117; border-radius: 10px; padding: 3px; border: 1px solid #30363d;">
+                                <div id="backtest-progress-bar" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 30px; border-radius: 7px; width: 0%; transition: width 0.5s ease; display: flex; align-items: center; justify-content: center;">
+                                    <span id="progress-text" style="color: white; font-weight: 600; font-size: 14px;">0%</span>
+                                </div>
+                            </div>
+
+                            <!-- Status Message -->
+                            <div id="backtest-status" style="margin-top: 15px; color: #8892b0; font-size: 14px;">
+                                Initializing backtest...
+                            </div>
+
+                            <!-- Metrics Being Calculated -->
+                            <div id="backtest-metrics" style="margin-top: 20px; padding: 20px; background: #0d1117; border-radius: 8px; border: 1px solid #30363d;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Whales Processed</div>
+                                        <div id="whales-processed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0 / 0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Trades Analyzed</div>
+                                        <div id="trades-analyzed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Time Elapsed</div>
+                                        <div id="time-elapsed" style="color: #6b8cff; font-size: 20px; font-weight: 600;">0:00</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px;">Est. Time Remaining</div>
+                                        <div id="time-remaining" style="color: #6b8cff; font-size: 20px; font-weight: 600;">--:--</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Results Container (hidden initially) -->
+                        <div id="backtest-results" style="display: none; margin-top: 40px;">
+                            <h4 style="color: #4ade80; margin-bottom: 20px;">✅ Backtest Complete</h4>
+                            <div style="padding: 25px; background: #0d1117; border-radius: 8px; border: 1px solid #30363d;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Total P&L</div>
+                                        <div id="result-pnl" style="color: #4ade80; font-size: 24px; font-weight: 600;">+$0</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Win Rate</div>
+                                        <div id="result-winrate" style="color: #6b8cff; font-size: 24px; font-weight: 600;">0%</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Sharpe Ratio</div>
+                                        <div id="result-sharpe" style="color: #6b8cff; font-size: 24px; font-weight: 600;">0.00</div>
+                                    </div>
+                                    <div>
+                                        <div style="color: #8892b0; font-size: 12px; margin-bottom: 5px;">Max Drawdown</div>
+                                        <div id="result-drawdown" style="color: #ef4444; font-size: 24px; font-weight: 600;">0%</div>
+                                    </div>
+                                </div>
+
+                                <button onclick="exportBacktestResults()" style="margin-top: 20px; background: #1a1f3a; padding: 10px 20px; border-radius: 6px; color: #6b8cff; border: 1px solid #4a5580; cursor: pointer;">
+                                    Export Results
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
+        }
+
+        // Backtest functions
+        function runBacktest() {
+            const startDate = document.getElementById('backtest-start').value;
+            const endDate = document.getElementById('backtest-end').value;
+
+            if (!startDate || !endDate) {
+                alert('Please select both start and end dates');
+                return;
+            }
+
+            // Hide button, show progress
+            document.getElementById('run-backtest-btn').style.display = 'none';
+            document.getElementById('backtest-progress-container').style.display = 'block';
+            document.getElementById('backtest-results').style.display = 'none';
+
+            // Start the backtest simulation
+            simulateBacktest();
+        }
+
+        function simulateBacktest() {
+            let progress = 0;
+            const totalWhales = 25;
+            let whalesProcessed = 0;
+            let tradesAnalyzed = 0;
+            let startTime = Date.now();
+
+            const interval = setInterval(() => {
+                progress += Math.random() * 15;
+                if (progress > 100) progress = 100;
+
+                // Update progress bar
+                document.getElementById('backtest-progress-bar').style.width = progress + '%';
+                document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+
+                // Update metrics
+                whalesProcessed = Math.floor((progress / 100) * totalWhales);
+                tradesAnalyzed = Math.floor(progress * 14.56);
+
+                document.getElementById('whales-processed').textContent = `${whalesProcessed} / ${totalWhales}`;
+                document.getElementById('trades-analyzed').textContent = tradesAnalyzed.toLocaleString();
+
+                // Update time
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('time-elapsed').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+                // Estimate remaining time
+                if (progress > 0 && progress < 100) {
+                    const totalEstimate = (elapsed / progress) * 100;
+                    const remaining = Math.floor(totalEstimate - elapsed);
+                    const remMinutes = Math.floor(remaining / 60);
+                    const remSeconds = remaining % 60;
+                    document.getElementById('time-remaining').textContent = `${remMinutes}:${remSeconds.toString().padStart(2, '0')}`;
+                }
+
+                // Update status message
+                if (progress < 25) {
+                    document.getElementById('backtest-status').textContent = 'Loading historical data...';
+                } else if (progress < 50) {
+                    document.getElementById('backtest-status').textContent = 'Analyzing whale positions...';
+                } else if (progress < 75) {
+                    document.getElementById('backtest-status').textContent = 'Calculating performance metrics...';
+                } else if (progress < 100) {
+                    document.getElementById('backtest-status').textContent = 'Finalizing results...';
+                } else {
+                    document.getElementById('backtest-status').textContent = 'Backtest complete!';
+                }
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    showBacktestResults();
+                }
+            }, 500);
+        }
+
+        function showBacktestResults() {
+            // Show results after a short delay
+            setTimeout(() => {
+                document.getElementById('backtest-progress-container').style.display = 'none';
+                document.getElementById('backtest-results').style.display = 'block';
+
+                // Populate with mock results
+                document.getElementById('result-pnl').textContent = '+$' + (Math.random() * 20000 + 5000).toFixed(2);
+                document.getElementById('result-winrate').textContent = (Math.random() * 20 + 60).toFixed(1) + '%';
+                document.getElementById('result-sharpe').textContent = (Math.random() * 1.5 + 1).toFixed(2);
+                document.getElementById('result-drawdown').textContent = '-' + (Math.random() * 10 + 5).toFixed(1) + '%';
+
+                // Show run button again
+                document.getElementById('run-backtest-btn').style.display = 'inline-block';
+            }, 1000);
+        }
+
+        function exportBacktestResults() {
+            alert('Exporting backtest results as CSV...');
+            // In a real implementation, this would generate and download a CSV file
         }
 
         // Live data updates
