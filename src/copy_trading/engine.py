@@ -13,7 +13,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from libs.common.models import Whale, Trade, Order, Market
-from copy_trading.tracker import WhalePositionTracker
+from copy_trading.orderbook_tracker import OrderbookTracker as WhalePositionTracker
 
 # Configure logging
 logging.basicConfig(
@@ -100,22 +100,34 @@ class CopyTradingEngine:
             activity_detected = 0
 
             for whale in whales:
-                # Monitor whale for position changes
-                changes = self.tracker.monitor_whale(whale.address)
+                # Monitor whale for new trades
+                new_trades = self.tracker.monitor_whale(whale.address)
 
-                if changes:
+                if new_trades:
                     activity_detected += 1
 
-                    for change in changes:
+                    for trade in new_trades:
                         # Log activity
-                        logger.info(f"📈 Activity detected:")
+                        logger.info(f"📈 New trade detected:")
                         logger.info(f"   Whale: {whale.pseudonym or whale.address[:10]}")
-                        logger.info(f"   New trades: +{change['new_trades']}")
-                        logger.info(f"   Volume change: ${change['volume_change']:,.0f}")
-                        logger.info(f"   PnL change: ${change['pnl_change']:,.0f}")
+                        logger.info(f"   Type: {trade['type']}")
+                        logger.info(f"   Market: {trade.get('market_title', 'Unknown')[:50] if trade.get('market_title') else 'Unknown'}")
+                        logger.info(f"   Shares: {trade['shares']:,.2f}")
+                        logger.info(f"   Price: ${trade['price']:.3f}")
+                        logger.info(f"   Amount: ${trade['amount']:,.0f}")
 
-                        # You can add logic here to trigger copy trades based on activity
-                        # For now, just log the detection
+                        # Save trade to database
+                        self.save_whale_trade(trade, whale, session)
+
+                        # Check if we should copy this trade
+                        should_copy, reason = self.should_copy_trade(trade, whale, session)
+
+                        if should_copy:
+                            logger.info(f"✅ Trade meets copy criteria: {reason}")
+                            # Execute the copy trade
+                            await self.execute_copy_trade(trade, whale, session)
+                        else:
+                            logger.info(f"⏭️  Skipping trade: {reason}")
 
             if activity_detected > 0:
                 logger.info(f"✅ Detected activity from {activity_detected} whales")
@@ -126,6 +138,43 @@ class CopyTradingEngine:
             logger.error(f"Error in monitor cycle: {e}")
         finally:
             session.close()
+
+    def save_whale_trade(self, trade_data: Dict, whale: Whale, session: Session):
+        """Save a whale trade to the database."""
+        try:
+            # Check if trade already exists
+            existing = session.query(Trade).filter_by(
+                trade_id=trade_data.get('id', '')
+            ).first()
+
+            if existing:
+                return
+
+            # Create new trade record
+            trade = Trade(
+                trade_id=trade_data.get('id', '')[:100] if trade_data.get('id') else '',  # Truncate to 100 chars
+                trader_address=whale.address.lower(),
+                market_id=trade_data.get('market_id', ''),
+                market_title=trade_data.get('market_title', ''),
+                token_id=trade_data.get('market_id', ''),  # Use market_id as token_id
+                side=trade_data.get('type', 'BUY').upper(),
+                size=trade_data.get('shares', 0),
+                price=trade_data.get('price', 0),
+                amount=trade_data.get('amount', 0),
+                timestamp=trade_data.get('timestamp', datetime.utcnow()),
+                transaction_hash=trade_data.get('tx_hash', ''),
+                is_whale_trade=True,
+                followed=False
+            )
+
+            session.add(trade)
+            session.commit()
+
+            logger.info(f"💾 Saved new whale trade: {trade.trade_id}")
+
+        except Exception as e:
+            logger.error(f"Error saving whale trade: {e}")
+            session.rollback()
 
     async def check_whale_for_new_trades(self, whale: Whale, session: Session) -> List[Trade]:
         """Check a specific whale for new trades since last check."""
@@ -226,7 +275,7 @@ class CopyTradingEngine:
             logger.error(f"Error parsing trade: {e}")
             return None
 
-    def should_copy_trade(self, trade: Trade, whale: Whale, session: Session) -> tuple:
+    def should_copy_trade(self, trade: Dict, whale: Whale, session: Session) -> tuple:
         """
         Evaluate if a trade should be copied based on rules.
         Returns (should_copy: bool, reason: str)
@@ -237,7 +286,7 @@ class CopyTradingEngine:
             return False, "Whale not enabled for copying"
 
         # Check position size filters
-        trade_value = float(trade.amount) if trade.amount else 0
+        trade_value = float(trade.get('amount', 0))
         min_size = self.config['trade_filters']['min_whale_position_size_usd']
         max_size = self.config['trade_filters']['max_whale_position_size_usd']
 
@@ -248,12 +297,13 @@ class CopyTradingEngine:
             return False, f"Trade too large (${trade_value:.0f} > ${max_size})"
 
         # Check price filters
-        if trade.price:
+        price = trade.get('price', 0)
+        if price:
             min_price = self.config['trade_filters']['price_filters']['min_price']
             max_price = self.config['trade_filters']['price_filters']['max_price']
 
-            if trade.price < min_price or trade.price > max_price:
-                return False, f"Price outside range ({trade.price:.3f})"
+            if price < min_price or price > max_price:
+                return False, f"Price outside range ({price:.3f})"
 
         # Check global exposure limits
         total_exposure = self.get_current_exposure(session)
@@ -284,7 +334,7 @@ class CopyTradingEngine:
         # Simplified for now
         return 0
 
-    async def execute_copy_trade(self, trade: Trade, whale: Whale, session: Session):
+    async def execute_copy_trade(self, trade: Dict, whale: Whale, session: Session):
         """Execute a copy trade based on whale's trade."""
         logger.info("=" * 80)
         logger.info(f"🎯 COPYING TRADE from {whale.pseudonym or whale.address[:10]}")
@@ -298,39 +348,48 @@ class CopyTradingEngine:
         max_position = tier_config.get('max_position_size_usd', 500)
 
         # Calculate our position size
-        whale_position_value = float(trade.amount) if trade.amount else 0
+        whale_position_value = float(trade.get('amount', 0))
         our_position_value = min(whale_position_value * copy_percentage, max_position)
 
         # Calculate size based on price
-        if trade.price and trade.price > 0:
-            our_size = our_position_value / float(trade.price)
+        price = float(trade.get('price', 0))
+        if price > 0:
+            our_size = our_position_value / price
         else:
             our_size = 0
 
-        logger.info(f"Whale trade: {trade.side} {trade.size:.2f} @ {trade.price:.3f} = ${whale_position_value:.2f}")
-        logger.info(f"Our trade: {trade.side} {our_size:.2f} @ {trade.price:.3f} = ${our_position_value:.2f}")
+        side = trade.get('type', 'BUY').upper()
+        shares = float(trade.get('shares', 0))
+
+        logger.info(f"Whale trade: {side} {shares:.2f} @ ${price:.3f} = ${whale_position_value:.2f}")
+        logger.info(f"Our trade: {side} {our_size:.2f} @ ${price:.3f} = ${our_position_value:.2f}")
         logger.info(f"Copy ratio: {copy_percentage*100:.0f}% (tier: {whale_tier})")
 
         # Create order record
         order = Order(
-            order_id=f"copy_{trade.trade_id}_{datetime.utcnow().timestamp()}",
-            market_id=trade.market_id,
-            token_id=trade.token_id,
-            side=trade.side,
+            order_id=f"copy_{trade.get('id', '')}_{datetime.utcnow().timestamp()}",
+            market_id=trade.get('market_id', ''),
+            token_id=trade.get('market_id', ''),
+            side=side,
             order_type="LIMIT",
-            price=trade.price,
+            price=price,
             size=our_size,
             status="PENDING",
             source_whale=whale.address,
-            source_trade_id=trade.trade_id,
+            source_trade_id=trade.get('id', ''),
             copy_ratio=Decimal(str(copy_percentage))
         )
 
         session.add(order)
 
-        # Mark trade as followed
-        trade.followed = True
-        trade.copy_reason = f"Copied from {whale_tier} tier whale"
+        # Update the saved trade record to mark as followed
+        saved_trade = session.query(Trade).filter_by(
+            trade_id=trade.get('id', '')[:100] if trade.get('id') else ''
+        ).first()
+
+        if saved_trade:
+            saved_trade.followed = True
+            saved_trade.copy_reason = f"Copied from {whale_tier} tier whale"
 
         session.commit()
 

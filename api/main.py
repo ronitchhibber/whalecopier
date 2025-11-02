@@ -198,7 +198,7 @@ async def get_whales():
 
 @app.get("/api/trades")
 async def get_trades(limit: int = 50):
-    """Get recent whale trades"""
+    """Get recent whale trades with market and whale information"""
     with Session(engine) as session:
         trades = session.execute(
             select(Trade)
@@ -207,17 +207,29 @@ async def get_trades(limit: int = 50):
             .limit(limit)
         ).scalars().all()
 
-        return [{
-            "id": t.trade_id,
-            "trader_address": t.trader_address,
-            "market_id": t.market_id,
-            "side": t.side,
-            "size": float(t.size) if t.size else 0,
-            "price": float(t.price) if t.price else 0,
-            "amount": float(t.amount) if t.amount else 0,
-            "timestamp": t.timestamp.isoformat() if t.timestamp else None,
-            "followed": t.followed
-        } for t in trades]
+        # Get whale information for each trade
+        result = []
+        for t in trades:
+            # Fetch whale info
+            whale = session.execute(
+                select(Whale).where(Whale.address == t.trader_address)
+            ).scalar_one_or_none()
+
+            result.append({
+                "id": t.trade_id,
+                "trader_address": t.trader_address,
+                "whale_name": whale.pseudonym if whale and whale.pseudonym else None,
+                "market_id": t.market_id if t.market_id else "",
+                "market_title": t.market_title if t.market_title else None,
+                "side": t.side,
+                "size": float(t.size) if t.size else 0,
+                "price": float(t.price) if t.price else 0,
+                "amount": float(t.amount) if t.amount else 0,
+                "timestamp": t.timestamp.isoformat() if t.timestamp else None,
+                "followed": t.followed
+            })
+
+        return result
 
 
 @app.get("/api/paper-trading/portfolio")
