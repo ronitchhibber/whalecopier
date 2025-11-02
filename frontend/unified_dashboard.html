@@ -932,10 +932,10 @@ Last: BUY BTC>100k $5K +12.5%
                             <button class="panel-btn" onclick="exportWhales()">Export CSV</button>
                         </div>
                     </div>
-                    <div class="panel-content">
-                        <div style="overflow-x: auto;">
+                    <div class="panel-content" style="display: flex; flex-direction: column; height: calc(100vh - 280px);">
+                        <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
                             <table class="whales-table" style="width: 100%;">
-                                <thead>
+                                <thead style="position: sticky; top: 0; background: #0d1117; z-index: 10;">
                                     <tr>
                                         <th>Address</th>
                                         <th>Tier</th>
@@ -955,7 +955,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 </tbody>
                             </table>
                         </div>
-                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="padding: 15px 20px; background: #0d1117; border-top: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0;">
                             <div style="color: #8892b0;">
                                 Showing <span id="whale-count">0</span> whales
                             </div>
@@ -1050,10 +1050,10 @@ Last: BUY BTC>100k $5K +12.5%
                             <button class="panel-btn" onclick="exportTrades()">Export CSV</button>
                         </div>
                     </div>
-                    <div class="panel-content">
-                        <div style="overflow-x: auto;">
+                    <div class="panel-content" style="display: flex; flex-direction: column; height: calc(100vh - 280px);">
+                        <div style="overflow-x: auto; overflow-y: auto; flex: 1;">
                             <table class="whales-table" style="width: 100%;">
-                                <thead>
+                                <thead style="position: sticky; top: 0; background: #0d1117; z-index: 10;">
                                     <tr>
                                         <th>Timestamp</th>
                                         <th>Type</th>
@@ -1072,7 +1072,7 @@ Last: BUY BTC>100k $5K +12.5%
                                 </tbody>
                             </table>
                         </div>
-                        <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center;">
+                        <div style="padding: 15px 20px; background: #0d1117; border-top: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; position: sticky; bottom: 0;">
                             <div style="color: #8892b0;">
                                 Showing <span id="trade-count">0</span> trades
                             </div>
@@ -1288,39 +1288,194 @@ Last: BUY BTC>100k $5K +12.5%
                 </div>
             `;
 
-            // Initialize charts
-            initializeAnalyticsCharts();
+            // Initialize charts after DOM is ready
+            setTimeout(() => {
+                initializeAnalyticsCharts();
+            }, 100);
             // Fetch analytics data
             fetchAnalyticsData();
         }
 
         function initializeAnalyticsCharts() {
-            // Simple chart rendering (would use Chart.js or similar in production)
+            // Draw P&L Over Time Line Chart
             const pnlCanvas = document.getElementById('pnl-canvas');
-            const winrateCanvas = document.getElementById('winrate-canvas');
-
             if (pnlCanvas && pnlCanvas.getContext) {
                 const ctx = pnlCanvas.getContext('2d');
-                // Draw simple line chart placeholder
+                const width = pnlCanvas.width = pnlCanvas.offsetWidth;
+                const height = pnlCanvas.height = pnlCanvas.offsetHeight;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Sample data points for P&L over time
+                const dataPoints = [
+                    { x: 0, y: 0 },
+                    { x: 1, y: 2500 },
+                    { x: 2, y: 4200 },
+                    { x: 3, y: 3800 },
+                    { x: 4, y: 7600 },
+                    { x: 5, y: 9200 },
+                    { x: 6, y: 8500 },
+                    { x: 7, y: 12000 },
+                    { x: 8, y: 15500 },
+                    { x: 9, y: 14200 },
+                    { x: 10, y: 18500 },
+                    { x: 11, y: 22000 },
+                    { x: 12, y: 25500 },
+                    { x: 13, y: 28000 },
+                    { x: 14, y: 32500 }
+                ];
+
+                // Calculate scales
+                const maxY = Math.max(...dataPoints.map(p => p.y));
+                const padding = 40;
+                const chartWidth = width - padding * 2;
+                const chartHeight = height - padding * 2;
+
+                // Draw grid lines
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 1;
+
+                // Horizontal grid lines
+                for (let i = 0; i <= 5; i++) {
+                    const y = padding + (chartHeight / 5) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+
+                    // Y-axis labels
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '11px monospace';
+                    ctx.textAlign = 'right';
+                    const value = '$' + ((maxY / 5) * (5 - i) / 1000).toFixed(1) + 'k';
+                    ctx.fillText(value, padding - 5, y + 3);
+                }
+
+                // Draw the line chart
                 ctx.strokeStyle = '#6b8cff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo(10, 200);
-                ctx.lineTo(100, 150);
-                ctx.lineTo(200, 100);
-                ctx.lineTo(300, 50);
+
+                dataPoints.forEach((point, index) => {
+                    const x = padding + (chartWidth / (dataPoints.length - 1)) * index;
+                    const y = padding + chartHeight - (point.y / maxY) * chartHeight;
+
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+
+                    // Draw data points
+                    ctx.fillStyle = '#6b8cff';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                });
                 ctx.stroke();
+
+                // Draw area under the line
+                ctx.fillStyle = 'rgba(107, 140, 255, 0.1)';
+                ctx.beginPath();
+                dataPoints.forEach((point, index) => {
+                    const x = padding + (chartWidth / (dataPoints.length - 1)) * index;
+                    const y = padding + chartHeight - (point.y / maxY) * chartHeight;
+
+                    if (index === 0) {
+                        ctx.moveTo(x, padding + chartHeight);
+                        ctx.lineTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                ctx.lineTo(width - padding, padding + chartHeight);
+                ctx.fill();
+
+                // X-axis labels
+                ctx.fillStyle = '#8892b0';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'center';
+                ['Week 1', 'Week 2'].forEach((label, index) => {
+                    const x = padding + (chartWidth / 2) * index + chartWidth / 4;
+                    ctx.fillText(label, x, height - 10);
+                });
             }
 
+            // Draw Win Rate Distribution Bar Chart
+            const winrateCanvas = document.getElementById('winrate-canvas');
             if (winrateCanvas && winrateCanvas.getContext) {
                 const ctx = winrateCanvas.getContext('2d');
-                // Draw simple bar chart placeholder
-                ctx.fillStyle = '#4ade80';
-                ctx.fillRect(50, 150, 40, 100);
-                ctx.fillStyle = '#6b8cff';
-                ctx.fillRect(100, 100, 40, 150);
-                ctx.fillStyle = '#fbbf24';
-                ctx.fillRect(150, 120, 40, 130);
+                const width = winrateCanvas.width = winrateCanvas.offsetWidth;
+                const height = winrateCanvas.height = winrateCanvas.offsetHeight;
+
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+
+                // Sample data for win rate distribution
+                const data = [
+                    { label: '<40%', value: 3, color: '#ef4444' },
+                    { label: '40-50%', value: 8, color: '#fbbf24' },
+                    { label: '50-60%', value: 15, color: '#6b8cff' },
+                    { label: '60-70%', value: 18, color: '#4ade80' },
+                    { label: '70-80%', value: 12, color: '#4ade80' },
+                    { label: '>80%', value: 6, color: '#22c55e' }
+                ];
+
+                const maxValue = Math.max(...data.map(d => d.value));
+                const padding = 40;
+                const chartWidth = width - padding * 2;
+                const chartHeight = height - padding * 2;
+                const barWidth = chartWidth / data.length * 0.7;
+                const barSpacing = chartWidth / data.length * 0.3;
+
+                // Draw grid lines
+                ctx.strokeStyle = '#30363d';
+                ctx.lineWidth = 1;
+
+                // Horizontal grid lines
+                for (let i = 0; i <= 4; i++) {
+                    const y = padding + (chartHeight / 4) * i;
+                    ctx.beginPath();
+                    ctx.moveTo(padding, y);
+                    ctx.lineTo(width - padding, y);
+                    ctx.stroke();
+
+                    // Y-axis labels
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '11px monospace';
+                    ctx.textAlign = 'right';
+                    const value = Math.round((maxValue / 4) * (4 - i));
+                    ctx.fillText(value, padding - 5, y + 3);
+                }
+
+                // Draw bars
+                data.forEach((item, index) => {
+                    const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
+                    const barHeight = (item.value / maxValue) * chartHeight;
+                    const y = padding + chartHeight - barHeight;
+
+                    // Draw bar
+                    ctx.fillStyle = item.color;
+                    ctx.fillRect(x, y, barWidth, barHeight);
+
+                    // Draw value on top of bar
+                    ctx.fillStyle = '#ccd6f6';
+                    ctx.font = '12px monospace';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(item.value, x + barWidth / 2, y - 5);
+
+                    // Draw label below bar
+                    ctx.fillStyle = '#8892b0';
+                    ctx.font = '10px monospace';
+                    ctx.fillText(item.label, x + barWidth / 2, height - 10);
+                });
+
+                // Add chart title inside
+                ctx.fillStyle = '#8892b0';
+                ctx.font = '10px monospace';
+                ctx.textAlign = 'left';
+                ctx.fillText('Whales', 5, 15);
             }
         }
 
