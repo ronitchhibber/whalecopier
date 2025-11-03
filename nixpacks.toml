@@ -1,0 +1,19 @@
+# Nixpacks configuration for Railway.app deployment
+# This tells Railway how to build and run the Whale Trader application
+
+[phases.setup]
+nixPkgs = ["python311", "postgresql", "gcc", "g++"]
+
+[phases.install]
+cmds = [
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+    "echo 'Build phase completed'"
+]
+
+[start]
+cmd = "python3 api/main.py"
