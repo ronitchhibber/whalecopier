@@ -118,7 +118,7 @@ ipdb==0.13.13                   # IPython debugger (NEW)
 watchdog==3.0.0                 # File monitoring (NEW)
 
 # Technical indicators
-ta-lib==0.4.28
+# ta-lib==0.4.28                 # Requires system C library - commented out for Railway deployment
 
 # System utilities (NEW)
 psutil==5.9.6                   # System monitoring
