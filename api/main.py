@@ -19,7 +19,7 @@ import requests
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from libs.common.models import Whale, Trade
+from libs.common.models import Whale, Trade, Position, TradingConfig
 from dotenv import load_dotenv
 import logging
 from decimal import Decimal
@@ -697,6 +697,175 @@ async def get_trades(limit: int = 50):
         return result
 
 
+@app.get("/api/positions")
+async def get_positions(limit: int = 50):
+    """Get active positions from copy trading"""
+    with Session(engine) as session:
+        # Get all open positions
+        positions = session.execute(
+            select(Position)
+            .where(Position.status == 'OPEN')
+            .order_by(desc(Position.opened_at))
+            .limit(limit)
+        ).scalars().all()
+
+        # Format for frontend
+        result = []
+        for p in positions:
+            result.append({
+                "position_id": p.position_id,
+                "market_id": p.market_id,
+                "market_title": p.market_title or "Unknown Market",
+                "outcome": p.outcome,
+                "size": float(p.size) if p.size else 0,
+                "entry_price": float(p.avg_entry_price) if p.avg_entry_price else 0,
+                "current_price": float(p.current_price) if p.current_price else float(p.avg_entry_price) if p.avg_entry_price else 0,
+                "initial_value": float(p.initial_value) if p.initial_value else 0,
+                "current_value": float(p.current_value) if p.current_value else float(p.initial_value) if p.initial_value else 0,
+                "unrealized_pnl": float(p.unrealized_pnl) if p.unrealized_pnl else 0,
+                "percent_pnl": float(p.percent_pnl) if p.percent_pnl else 0,
+                "source_whale": p.source_whale if p.source_whale else "Unknown",
+                "opened_at": p.opened_at.isoformat() if p.opened_at else None,
+                "status": p.status
+            })
+
+        return result
+
+
+@app.get("/api/unrealized-pnl")
+async def get_unrealized_pnl():
+    """Get real-time unrealized P&L from all open positions using live CLOB orderbook data"""
+    try:
+        # Import Polymarket client to get live orderbook prices
+        import sys
+        import os
+        from dotenv import load_dotenv
+        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from src.api.polymarket_client import PolymarketClient
+
+        load_dotenv()
+
+        with Session(engine) as session:
+            # Get all open positions
+            positions = session.execute(
+                select(Position)
+                .where(Position.status == 'OPEN')
+            ).scalars().all()
+
+            if not positions:
+                return {
+                    "total_unrealized_pnl": 0.0,
+                    "total_positions": 0,
+                    "positions": [],
+                    "last_updated": datetime.utcnow().isoformat()
+                }
+
+            # Initialize Polymarket client for live price data
+            poly_client = PolymarketClient(
+                api_key=os.getenv('POLYMARKET_API_KEY'),
+                secret=os.getenv('POLYMARKET_API_SECRET'),
+                passphrase=os.getenv('POLYMARKET_API_PASSPHRASE'),
+                private_key=os.getenv('POLYMARKET_PRIVATE_KEY'),
+            )
+
+            # Fetch current market prices for all positions
+            total_unrealized = 0.0
+            position_details = []
+
+            # Get unique token IDs from positions
+            # Fetch token IDs from Gamma API since they're not in database
+            import httpx
+            async_client = httpx.AsyncClient(timeout=10.0)
+
+            for p in positions:
+                try:
+                    # Fetch market data from Gamma API to get token IDs
+                    # Use condition_id query param instead of path param
+                    gamma_url = "https://gamma-api.polymarket.com/markets"
+                    response = await async_client.get(gamma_url, params={"condition_id": p.market_id})
+
+                    if response.status_code == 200:
+                        markets = response.json()
+                        # API returns array when using query params
+                        if isinstance(markets, list) and len(markets) > 0:
+                            market_data = markets[0]
+                        else:
+                            market_data = markets if isinstance(markets, dict) else {}
+
+                        tokens = market_data.get("tokens", [])
+
+                        if len(tokens) >= 2:
+                            # tokens[0] is NO, tokens[1] is YES
+                            if p.outcome and p.outcome.upper() == "YES":
+                                token_id = tokens[1]["token_id"]
+                            else:
+                                token_id = tokens[0]["token_id"]
+
+                            # Fetch live orderbook price from CLOB
+                            if token_id and poly_client.clob_client:
+                                try:
+                                    # Get midpoint price (average of best bid and ask)
+                                    current_price = poly_client.get_midpoint(token_id)
+                                except Exception as e:
+                                    logger.warning(f"Failed to get CLOB price for {token_id}: {e}, using entry price")
+                                    current_price = float(p.avg_entry_price) if p.avg_entry_price else 0.5
+                            else:
+                                current_price = float(p.avg_entry_price) if p.avg_entry_price else 0.5
+                        else:
+                            logger.warning(f"No tokens found for market {p.market_id}")
+                            current_price = float(p.avg_entry_price) if p.avg_entry_price else 0.5
+                    else:
+                        logger.warning(f"Failed to fetch market {p.market_id} from Gamma API: {response.status_code}")
+                        current_price = float(p.avg_entry_price) if p.avg_entry_price else 0.5
+
+                except Exception as e:
+                    logger.error(f"Error fetching price for position {p.position_id}: {e}")
+                    current_price = float(p.avg_entry_price) if p.avg_entry_price else 0.5
+
+                # Calculate unrealized P&L for this position
+                shares = float(p.size) if p.size else 0
+                entry_price = float(p.avg_entry_price) if p.avg_entry_price else 0
+
+                initial_value = shares * entry_price
+                current_value = shares * current_price
+                position_pnl = current_value - initial_value
+
+                total_unrealized += position_pnl
+
+                position_details.append({
+                    "market_id": p.market_id,
+                    "market_title": p.market_title or "Unknown",
+                    "outcome": p.outcome,
+                    "shares": shares,
+                    "entry_price": entry_price,
+                    "current_price": current_price,
+                    "initial_value": initial_value,
+                    "current_value": current_value,
+                    "unrealized_pnl": position_pnl,
+                    "percent_pnl": ((current_price - entry_price) / entry_price * 100) if entry_price > 0 else 0
+                })
+
+            # Close async HTTP client
+            await async_client.aclose()
+
+            return {
+                "total_unrealized_pnl": total_unrealized,
+                "total_positions": len(positions),
+                "positions": position_details,
+                "last_updated": datetime.utcnow().isoformat()
+            }
+
+    except Exception as e:
+        logger.error(f"Error calculating unrealized P&L: {e}")
+        return {
+            "total_unrealized_pnl": 0.0,
+            "total_positions": 0,
+            "positions": [],
+            "error": str(e),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+
 @app.get("/api/paper-trading/portfolio")
 async def get_paper_portfolio():
     """Get current paper trading portfolio"""
@@ -1318,6 +1487,98 @@ async def get_system_status():
         }
 
     return system_manager.get_status()
+
+
+# ============================================================================
+# KILL SWITCH / TRADING CONFIG ENDPOINTS
+# ============================================================================
+
+@app.get("/api/trading-config/status")
+async def get_trading_config_status():
+    """Get current trading configuration and kill switch status."""
+    try:
+        with Session(engine) as session:
+            config = session.query(TradingConfig).filter_by(id=1).first()
+            if not config:
+                return {
+                    "error": "Trading config not found",
+                    "copy_trading_enabled": False
+                }
+
+            return {
+                "copy_trading_enabled": config.copy_trading_enabled,
+                "max_position_size": float(config.max_position_size),
+                "max_total_exposure": float(config.max_total_exposure),
+                "max_positions": config.max_positions,
+                "last_modified_at": config.last_modified_at.isoformat() if config.last_modified_at else None,
+                "modified_by": config.modified_by
+            }
+    except Exception as e:
+        logger.error(f"Error fetching trading config: {e}")
+        return {
+            "error": str(e),
+            "copy_trading_enabled": False
+        }
+
+
+@app.post("/api/trading-config/enable")
+async def enable_copy_trading():
+    """Enable copy trading (turn off kill switch)."""
+    try:
+        with Session(engine) as session:
+            config = session.query(TradingConfig).filter_by(id=1).first()
+            if not config:
+                return {
+                    "success": False,
+                    "error": "Trading config not found"
+                }
+
+            config.copy_trading_enabled = True
+            config.modified_by = "api_user"
+            session.commit()
+
+            logger.info("Copy trading ENABLED via API")
+            return {
+                "success": True,
+                "copy_trading_enabled": True,
+                "message": "Copy trading enabled successfully"
+            }
+    except Exception as e:
+        logger.error(f"Error enabling copy trading: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
+@app.post("/api/trading-config/disable")
+async def disable_copy_trading():
+    """Disable copy trading (activate kill switch)."""
+    try:
+        with Session(engine) as session:
+            config = session.query(TradingConfig).filter_by(id=1).first()
+            if not config:
+                return {
+                    "success": False,
+                    "error": "Trading config not found"
+                }
+
+            config.copy_trading_enabled = False
+            config.modified_by = "api_user"
+            session.commit()
+
+            logger.info("Copy trading DISABLED via API")
+            return {
+                "success": True,
+                "copy_trading_enabled": False,
+                "message": "Copy trading disabled successfully"
+            }
+    except Exception as e:
+        logger.error(f"Error disabling copy trading: {e}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 # ============================================================================

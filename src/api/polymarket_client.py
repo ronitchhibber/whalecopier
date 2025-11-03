@@ -62,20 +62,26 @@ class PolymarketClient:
 
         # Initialize CLOB client (if py_clob_client is available)
         if PY_CLOB_CLIENT_AVAILABLE and ClobClient is not None:
+            # Create credentials object if API keys are provided
+            creds = None
+            if all([self.api_key, self.secret, self.passphrase]):
+                try:
+                    from py_clob_client.clob_types import ApiCreds
+                    creds = ApiCreds(
+                        api_key=self.api_key,
+                        api_secret=self.secret,
+                        api_passphrase=self.passphrase
+                    )
+                except ImportError:
+                    logger.warning("Could not import ApiCreds from py_clob_client")
+
             self.clob_client = ClobClient(
                 host=settings.POLYMARKET_API_URL,
                 key=self.private_key if self.private_key else None,
                 chain_id=settings.CHAIN_ID,
                 signature_type=0,  # 0 = EOA (MetaMask), 1 = Email/Magic, 2 = Browser
+                creds=creds  # Pass credentials during initialization
             )
-
-            # Set API credentials if available
-            if all([self.api_key, self.secret, self.passphrase]):
-                self.clob_client.set_api_creds({
-                    'apiKey': self.api_key,
-                    'secret': self.secret,
-                    'passphrase': self.passphrase,
-                })
         else:
             self.clob_client = None
             logger.warning(

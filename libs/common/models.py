@@ -48,803 +48,484 @@ class Sector(PyEnum):
     OTHER = "other"
 
 
-class CopyMode(PyEnum):
-    """Copy execution mode"""
-    IMMEDIATE = "immediate"
-    DELAYED = "delayed"
-    PARTIAL = "partial"
-    CONDITIONAL = "conditional"
+class PositionStatus(PyEnum):
+    """Status of a trade position"""
+    OPEN = "open"
+    CLOSED = "closed"
+    EXPIRED = "expired"
+
+
+class Side(PyEnum):
+    """Trade side"""
+    BUY = "buy"
+    SELL = "sell"
+
+
+class ManipulationSignal(PyEnum):
+    """Type of detected manipulation"""
+    WASH_TRADING = "wash_trading"
+    SPOOFING = "spoofing"
+    LAYERING = "layering"
+    PUMP_AND_DUMP = "pump_and_dump"
 
 
 # =============================================================================
-# WHALE INTELLIGENCE TABLES
+# CORE TABLES
 # =============================================================================
-
-class WalletCluster(Base):
-    """
-    Wallet clustering - links multiple addresses to single entity.
-    Implements on-chain intelligence to defeat multi-wallet obfuscation.
-    """
-    __tablename__ = 'wallet_clusters'
-
-    cluster_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    entity_name = Column(String(200))  # If identified (e.g., via Arkham)
-
-    # Clustering confidence
-    confidence_score = Column(Numeric(5, 4), nullable=False)  # 0-1
-    clustering_method = Column(String(50))  # proxy_linkage, funding_flow, temporal_corr
-
-    # Member wallets (array of addresses)
-    member_addresses = Column(ARRAY(String(42)), nullable=False)
-    primary_address = Column(String(42))  # Most active address
-
-    # On-chain intelligence
-    funding_source = Column(String(42))  # Common funding wallet
-    arkham_entity_id = Column(String(100))
-    nansen_label = Column(String(100))
-
-    # Metadata
-    first_seen = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-
-    # Relationships
-    whales = relationship("Whale", back_populates="cluster")
-
-    __table_args__ = (
-        Index('idx_wallet_cluster_primary', 'primary_address'),
-        Index('idx_wallet_cluster_confidence', 'confidence_score'),
-    )
-
-    def __repr__(self):
-        return f"<WalletCluster(id={str(self.cluster_id)[:8]}, size={len(self.member_addresses)})>"
-
 
 class Whale(Base):
     """
-    Whale trader model - enhanced with multi-factor scoring.
-    Tracks both on-platform and on-chain activity.
+    Tracked whale trader with performance metrics and edge decay monitoring.
+
+    Enhancements vs base:
+    - Edge decay tracking (CUSUM)
+    - Manipulation detection
+    - Wallet clustering support
     """
     __tablename__ = 'whales'
 
-    address = Column(String(42), primary_key=True)
-    cluster_id = Column(UUID(as_uuid=True), ForeignKey('wallet_clusters.cluster_id', ondelete='SET NULL'))
-
     # Identity
-    pseudonym = Column(String(100))
-    profile_image = Column(Text)
-    platform = Column(Enum(Platform), default=Platform.POLYMARKET)
+    address = Column(String(42), primary_key=True)  # Ethereum address
+    platform = Column(Enum(Platform), nullable=False, default=Platform.POLYMARKET, server_default='polymarket')
+    cluster_id = Column(String(36), nullable=True)  # UUID for wallet clustering
 
-    # Volume & trading stats
-    total_volume = Column(Numeric(20, 2), nullable=False, default=0)
-    total_trades = Column(Integer, nullable=False, default=0)
-    active_positions = Column(Integer, nullable=False, default=0)
-    avg_trade_size = Column(Numeric(20, 2))
-    avg_hold_time = Column(Numeric(10, 2))  # hours
-    trade_frequency = Column(Numeric(10, 4))  # trades/day
+    # Core performance metrics
+    total_trades = Column(Integer, default=0)
+    total_volume = Column(Numeric(20, 2), default=0.0)
+    avg_trade_size = Column(Numeric(20, 2), default=0.0)
+    quality_score = Column(Numeric(5, 2), default=0.0)  # 0-100
 
-    # 24h metrics (for real-time insights)
-    trades_24h = Column(Integer)  # Number of trades in last 24 hours
-    volume_24h = Column(Numeric(20, 2))  # Dollar volume in last 24 hours
-    active_trades = Column(Integer)  # Current number of active trades
-    most_recent_trade_at = Column(TIMESTAMP)  # Timestamp of most recent trade
-    last_trade_check_at = Column(TIMESTAMP)  # When we last checked for new trades
+    # Risk-adjusted performance
+    sharpe_ratio = Column(Numeric(10, 4), default=0.0)
+    win_rate = Column(Numeric(5, 2), default=0.0)  # Percentage
+    total_pnl = Column(Numeric(20, 2), default=0.0)
+    roi = Column(Numeric(10, 4), default=0.0)  # Decimal (0.15 = 15%)
+    max_drawdown = Column(Numeric(10, 4), default=0.0)
 
-    # Performance metrics (full history)
-    total_pnl = Column(Numeric(20, 2))
-    win_rate = Column(Numeric(5, 2))
-    roi = Column(Numeric(10, 2))
-    sharpe_ratio = Column(Numeric(10, 4))
-    sortino_ratio = Column(Numeric(10, 4))
-    calmar_ratio = Column(Numeric(10, 4))
-    max_drawdown = Column(Numeric(10, 2))
-    profit_factor = Column(Numeric(10, 4))
-    k_ratio = Column(Numeric(10, 4))
+    # Edge decay detection (CUSUM)
+    cusum_value = Column(Numeric(10, 4), default=0.0)
+    cusum_threshold = Column(Numeric(10, 4), default=5.0)
+    edge_degraded = Column(Boolean, default=False)
+    last_cusum_update = Column(TIMESTAMP)
 
-    # Rolling performance (recent performance - more predictive)
-    rolling_30d_sharpe = Column(Numeric(10, 4))
-    rolling_30d_winrate = Column(Numeric(5, 2))
-    rolling_90d_sharpe = Column(Numeric(10, 4))
-    rolling_90d_winrate = Column(Numeric(5, 2))
+    # Manipulation detection
+    manipulation_score = Column(Numeric(5, 2), default=0.0)  # 0-100, higher = more suspicious
+    manipulation_alerts = Column(Integer, default=0)
+    last_manipulation_check = Column(TIMESTAMP)
 
-    # Ledoit-Wolf robust metrics
-    sharpe_ci_lower = Column(Numeric(10, 4))  # Lower bound of 95% CI
-    sharpe_ci_upper = Column(Numeric(10, 4))  # Upper bound
-    sharpe_shrunk = Column(Numeric(10, 4))  # James-Stein shrunk estimate
+    # Copy trading control
+    is_copying_enabled = Column(Boolean, default=True)
+    copy_allocation = Column(Numeric(5, 4), default=0.0)  # Fraction of portfolio
 
-    # Category specialization (JSONB: {category: {sharpe, win_rate, trades, pnl}})
-    category_performance = Column(JSONB, default={})
-    primary_category = Column(Enum(Sector))
-
-    # Market influence metrics
-    avg_price_impact = Column(Numeric(10, 6))  # Avg % price move post-trade
-    market_maker_score = Column(Numeric(10, 4))  # How often provides liquidity
-
-    # Multi-factor whale score (0-100)
-    quality_score = Column(Numeric(10, 4))
-    score_components = Column(JSONB)  # {sharpe_z: 0.7, winrate_z: 0.3, ...}
-    rank = Column(Integer)
-    tier = Column(String(20))  # MEGA, LARGE, MEDIUM
-
-    # Edge decay monitoring
-    cusum_statistic = Column(Numeric(15, 6))  # CUSUM test statistic
-    edge_status = Column(String(20), default='active')  # active, degrading, paused, culled
-    last_cusum_check = Column(TIMESTAMP)
-
-    # Status
-    is_active = Column(Boolean, default=True)
-    is_copying_enabled = Column(Boolean, default=False)
-    is_blacklisted = Column(Boolean, default=False)
-    blacklist_reason = Column(Text)
-
-    # Timestamps
+    # Metadata
     first_seen = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    last_active = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
 
     # Relationships
-    cluster = relationship("WalletCluster", back_populates="whales")
-    trades = relationship("Trade", back_populates="whale", cascade="all, delete-orphan")
-    positions = relationship("Position", back_populates="whale")
-    orders = relationship("Order", back_populates="source_whale_rel")
-    edge_decay_logs = relationship("EdgeDecayLog", back_populates="whale")
-    manipulation_flags = relationship("ManipulationFlag", back_populates="whale")
+    trades = relationship('Trade', back_populates='whale', cascade='all, delete-orphan')
+    positions = relationship('Position', back_populates='whale', cascade='all, delete-orphan')
 
     __table_args__ = (
-        Index('idx_whale_quality_score', 'quality_score', 'is_active'),
-        Index('idx_whale_tier', 'tier', 'is_active'),
-        Index('idx_whale_edge_status', 'edge_status'),
-        Index('idx_whale_category', 'primary_category'),
-        Index('idx_whale_copying_enabled', 'is_copying_enabled'),
+        CheckConstraint('quality_score >= 0 AND quality_score <= 100', name='valid_quality_score'),
+        CheckConstraint('win_rate >= 0 AND win_rate <= 100', name='valid_win_rate'),
+        CheckConstraint('manipulation_score >= 0 AND manipulation_score <= 100', name='valid_manipulation_score'),
+        Index('idx_whale_quality', 'quality_score'),
+        Index('idx_whale_platform', 'platform'),
+        Index('idx_whale_cluster', 'cluster_id'),
+        Index('idx_whale_edge_degraded', 'edge_degraded'),
+        Index('idx_whale_copying', 'is_copying_enabled'),
     )
 
     def __repr__(self):
-        return f"<Whale(address={self.address[:8]}, score={self.quality_score}, tier={self.tier})>"
+        return f"<Whale(address={self.address[:10]}..., quality={self.quality_score}, win_rate={self.win_rate}%)>"
 
-
-class EdgeDecayLog(Base):
-    """
-    Edge decay detection log - tracks CUSUM/Page-Hinkley test results.
-    Provides early warning system for whale performance degradation.
-    """
-    __tablename__ = 'edge_decay_logs'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'), nullable=False)
-
-    # Test parameters
-    test_type = Column(String(20), nullable=False)  # CUSUM, PAGE_HINKLEY, BOCPD
-    lookback_days = Column(Integer, nullable=False, default=30)
-
-    # Test results
-    test_statistic = Column(Numeric(15, 6), nullable=False)
-    threshold = Column(Numeric(15, 6), nullable=False)
-    change_detected = Column(Boolean, nullable=False)
-    p_value = Column(Numeric(10, 6))
-
-    # Performance snapshot
-    recent_sharpe = Column(Numeric(10, 4))
-    recent_winrate = Column(Numeric(5, 2))
-    recent_pnl = Column(Numeric(20, 2))
-    drawdown_from_peak = Column(Numeric(10, 2))
-
-    # Action taken
-    action = Column(String(20))  # pause, cull, alert, none
-    notes = Column(Text)
-
-    # Timestamp
-    timestamp = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-
-    # Relationships
-    whale = relationship("Whale", back_populates="edge_decay_logs")
-
-    __table_args__ = (
-        Index('idx_edge_decay_whale_time', 'whale_address', 'timestamp'),
-        Index('idx_edge_decay_change', 'change_detected', 'timestamp'),
-    )
-
-    def __repr__(self):
-        return f"<EdgeDecayLog(whale={self.whale_address[:8]}, change={self.change_detected}, action={self.action})>"
-
-
-# =============================================================================
-# MARKET & TRADING TABLES
-# =============================================================================
 
 class Market(Base):
-    """Market model - enhanced with liquidity and resolution tracking"""
+    """
+    Prediction market with metadata and manipulation tracking.
+
+    Enhancements:
+    - Sector classification
+    - Manipulation detection
+    - Historical volatility
+    """
     __tablename__ = 'markets'
 
-    condition_id = Column(String(66), primary_key=True)
-    question = Column(Text, nullable=False)
+    # Identity
+    id = Column(String(66), primary_key=True)  # Market ID from platform
+    platform = Column(Enum(Platform), nullable=False, default=Platform.POLYMARKET)
+
+    # Market details
+    title = Column(Text, nullable=False)
     description = Column(Text)
-    platform = Column(Enum(Platform), default=Platform.POLYMARKET)
+    sector = Column(Enum(Sector), default=Sector.OTHER)
 
     # Market state
-    active = Column(Boolean, default=True)
-    closed = Column(Boolean, default=False)
-    archived = Column(Boolean, default=False)
-    is_disputed = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    is_resolved = Column(Boolean, default=False)
+    resolution_value = Column(Numeric(10, 2))  # Decimal representation (0.0 = NO, 1.0 = YES)
 
-    # Token IDs
-    yes_token_id = Column(String(78))
-    no_token_id = Column(String(78))
+    # Market metrics
+    total_volume = Column(Numeric(20, 2), default=0.0)
+    liquidity = Column(Numeric(20, 2), default=0.0)
+    current_price = Column(Numeric(10, 2), default=0.50)
 
-    # Pricing & liquidity
-    yes_price = Column(Numeric(10, 6))
-    no_price = Column(Numeric(10, 6))
-    volume = Column(Numeric(20, 2))
-    volume_24h = Column(Numeric(20, 2))
-    liquidity = Column(Numeric(20, 2))
-    open_interest = Column(Numeric(20, 2))
+    # Risk metrics
+    volatility = Column(Numeric(10, 4), default=0.0)  # Historical volatility
+    spread = Column(Numeric(10, 4), default=0.0)  # Bid-ask spread
 
-    # Microstructure
-    bid_ask_spread = Column(Numeric(10, 6))
-    order_book_depth = Column(Numeric(20, 2))
-
-    # Market metadata
-    category = Column(Enum(Sector))
-    tags = Column(ARRAY(Text))
-    event_id = Column(String(100))
-    market_slug = Column(String(200))
-    url = Column(String(500))
-
-    # Resolution
-    outcome = Column(String(10))
-    outcome_prices = Column(JSONB)
-    resolution_source = Column(String(500))
-    uma_proposal_id = Column(String(100))
-
-    # Risk flags
-    manipulation_risk_score = Column(Numeric(5, 2))  # 0-10 scale
-    oracle_attack_detected = Column(Boolean, default=False)
+    # Manipulation detection
+    manipulation_score = Column(Numeric(5, 2), default=0.0)
+    suspicious_activity_count = Column(Integer, default=0)
 
     # Timestamps
     created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
     end_date = Column(TIMESTAMP)
-    resolution_date = Column(TIMESTAMP)
-    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    resolved_at = Column(TIMESTAMP)
+    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
 
     # Relationships
-    positions = relationship("Position", back_populates="market")
-    order_books = relationship("OrderBook", back_populates="market")
+    trades = relationship('Trade', back_populates='market', cascade='all, delete-orphan')
+    positions = relationship('Position', back_populates='market', cascade='all, delete-orphan')
 
     __table_args__ = (
-        Index('idx_markets_active', 'active', 'closed'),
-        Index('idx_markets_category', 'category'),
-        Index('idx_markets_end_date', 'end_date'),
-        Index('idx_markets_volume', 'volume_24h'),
-        Index('idx_markets_liquidity', 'liquidity'),
+        Index('idx_market_active', 'is_active', 'is_resolved'),
+        Index('idx_market_sector', 'sector'),
+        Index('idx_market_platform', 'platform'),
+        Index('idx_market_end_date', 'end_date'),
     )
 
     def __repr__(self):
-        return f"<Market(id={self.condition_id[:12]}, question={self.question[:50]})>"
-
-
-class OrderBook(Base):
-    """
-    Order book snapshot - time-series data for microstructure analysis.
-    Used for slippage modeling and liquidity assessment.
-    """
-    __tablename__ = 'order_books'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    market_id = Column(String(66), ForeignKey('markets.condition_id', ondelete='CASCADE'), nullable=False)
-    token_id = Column(String(78), nullable=False)
-    timestamp = Column(TIMESTAMP, nullable=False, index=True)
-
-    # Best bid/ask
-    best_bid = Column(Numeric(10, 6))
-    best_ask = Column(Numeric(10, 6))
-    bid_size = Column(Numeric(20, 6))
-    ask_size = Column(Numeric(20, 6))
-
-    # Full book depth (top 10 levels each side)
-    bids = Column(JSONB)  # [{price: 0.55, size: 1000}, ...]
-    asks = Column(JSONB)
-
-    # Computed metrics
-    spread = Column(Numeric(10, 6))
-    spread_bps = Column(Integer)  # Basis points
-    mid_price = Column(Numeric(10, 6))
-    micro_price = Column(Numeric(10, 6))  # Volume-weighted mid
-    book_imbalance = Column(Numeric(10, 4))  # (bid_vol - ask_vol) / (bid_vol + ask_vol)
-
-    # Liquidity within X% of mid
-    liquidity_2pct = Column(Numeric(20, 2))  # Liquidity within 2% of mid
-    liquidity_5pct = Column(Numeric(20, 2))
-
-    # Relationships
-    market = relationship("Market", back_populates="order_books")
-
-    __table_args__ = (
-        Index('idx_orderbook_market_time', 'market_id', 'timestamp'),
-        Index('idx_orderbook_token_time', 'token_id', 'timestamp'),
-    )
-
-    def __repr__(self):
-        return f"<OrderBook(market={self.market_id[:12]}, mid={self.mid_price}, spread={self.spread})>"
+        return f"<Market(id={self.id[:10]}..., title={self.title[:30]}...)>"
 
 
 class Trade(Base):
     """
-    Trade model - comprehensive execution tracking.
-    Stores both whale trades (copied) and our own trade executions.
+    Individual whale trade with execution details.
+
+    Enhancements:
+    - Copy trade tracking
+    - Execution quality metrics
     """
     __tablename__ = 'trades'
 
-    trade_id = Column(String(100), primary_key=True)
-    trader_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'), nullable=False)
+    # Identity
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    trade_hash = Column(String(66), unique=True, index=True)  # Blockchain transaction hash
 
-    # Market identifiers
-    market_id = Column(String(66), nullable=False)
-    condition_id = Column(String(66))
-    token_id = Column(String(78), nullable=False)
-    event_slug = Column(String(200))
+    # References
+    whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'), nullable=False)
+    market_id = Column(String(66), ForeignKey('markets.id', ondelete='CASCADE'), nullable=False)
 
     # Trade details
-    side = Column(String(4), nullable=False)  # BUY, SELL
-    size = Column(Numeric(20, 6), nullable=False)
-    price = Column(Numeric(10, 6), nullable=False)
-    amount = Column(Numeric(20, 2), nullable=False)
-    fee_amount = Column(Numeric(20, 6))
+    side = Column(Enum(Side), nullable=False)
+    size = Column(Numeric(20, 8), nullable=False)  # Number of shares
+    price = Column(Numeric(10, 2), nullable=False)  # Price per share (0-1)
+    amount = Column(Numeric(20, 2), nullable=False)  # Total amount (size * price)
 
-    # Market context
-    market_title = Column(Text)
-    outcome = Column(String(10))  # YES, NO
-    category = Column(Enum(Sector))
-
-    # Execution details
-    transaction_hash = Column(String(66))
-    maker_address = Column(String(42))
-    order_id = Column(String(100))
-
-    # Microstructure
-    pre_trade_price = Column(Numeric(10, 6))  # Price before trade
-    post_trade_price = Column(Numeric(10, 6))  # Price after trade
-    price_impact_pct = Column(Numeric(10, 6))  # % price move
-    book_spread_at_trade = Column(Numeric(10, 6))
-
-    # Copy trading metadata
-    is_whale_trade = Column(Boolean, default=False, index=True)
-    followed = Column(Boolean, default=False, index=True)
-    our_order_id = Column(String(100))
-    copy_mode = Column(Enum(CopyMode))
-    copy_ratio = Column(Numeric(5, 4))  # What % of whale's size we copied
-    copy_latency_ms = Column(Integer)  # How long after whale trade
-    copy_reason = Column(Text)
-    skip_reason = Column(Text)
-
-    # Timestamps
-    timestamp = Column(TIMESTAMP, nullable=False, index=True)
-    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-
-    # Relationships
-    whale = relationship("Whale", back_populates="trades")
-
-    __table_args__ = (
-        CheckConstraint("side IN ('BUY', 'SELL')", name='check_trade_side'),
-        CheckConstraint("outcome IN ('YES', 'NO', NULL)", name='check_trade_outcome'),
-        Index('idx_trades_timestamp', 'timestamp'),
-        Index('idx_trades_trader_time', 'trader_address', 'timestamp'),
-        Index('idx_trades_market_time', 'market_id', 'timestamp'),
-        Index('idx_trades_whale_followed', 'is_whale_trade', 'followed'),
-        Index('idx_trades_category_time', 'category', 'timestamp'),
-    )
-
-    def __repr__(self):
-        return f"<Trade(id={self.trade_id[:12]}, trader={self.trader_address[:8]}, {self.side} {self.size}@{self.price})>"
-
-
-class Order(Base):
-    """
-    Order model - tracks our own order lifecycle.
-    Links back to source whale trade for performance attribution.
-    """
-    __tablename__ = 'orders'
-
-    order_id = Column(String(100), primary_key=True)
-
-    # Market identifiers
-    market_id = Column(String(66), nullable=False)
-    token_id = Column(String(78), nullable=False)
-
-    # Order details
-    side = Column(String(4), nullable=False)
-    order_type = Column(String(10), nullable=False)  # LIMIT, MARKET, FOK, FAK, GTC
-    price = Column(Numeric(10, 6))
-    size = Column(Numeric(20, 6), nullable=False)
-    filled_size = Column(Numeric(20, 6), default=0)
-    remaining_size = Column(Numeric(20, 6))
-    avg_fill_price = Column(Numeric(10, 6))
+    # Copy trading
+    was_copied = Column(Boolean, default=False)
+    copy_trade_id = Column(Integer, ForeignKey('trades.id', ondelete='SET NULL'))  # Our mirrored trade
 
     # Execution quality
-    slippage_pct = Column(Numeric(10, 6))  # vs intended price
-    slippage_cost = Column(Numeric(20, 2))  # $ impact
-
-    # Status
-    status = Column(String(20), nullable=False, default='PENDING')
-
-    # Copy trading metadata
-    source_whale = Column(String(42), ForeignKey('whales.address', ondelete='SET NULL'))
-    source_trade_id = Column(String(100))
-    copy_mode = Column(Enum(CopyMode))
-    copy_ratio = Column(Numeric(5, 4))
-
-    # Execution tracking
-    fills = Column(JSONB, default=[])  # [{price, size, timestamp}, ...]
-    error_message = Column(Text)
-    retry_count = Column(Integer, default=0)
-
-    # EIP-712 signature
-    signature = Column(String(132))  # Signed order hash
-    nonce = Column(Integer)
+    slippage = Column(Numeric(10, 4))  # If copied, how much slippage vs whale
+    execution_delay_ms = Column(Integer)  # Milliseconds between whale trade and copy
 
     # Timestamps
-    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    submitted_at = Column(TIMESTAMP)
-    filled_at = Column(TIMESTAMP)
-    cancelled_at = Column(TIMESTAMP)
-    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    timestamp = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    detected_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
 
     # Relationships
-    source_whale_rel = relationship("Whale", back_populates="orders")
+    whale = relationship('Whale', back_populates='trades')
+    market = relationship('Market', back_populates='trades')
+    copy_trade = relationship('Trade', remote_side=[id], foreign_keys=[copy_trade_id])
 
     __table_args__ = (
-        CheckConstraint("side IN ('BUY', 'SELL')", name='check_order_side'),
-        CheckConstraint(
-            "order_type IN ('LIMIT', 'MARKET', 'FOK', 'FAK', 'GTC')",
-            name='check_order_type'
-        ),
-        CheckConstraint(
-            "status IN ('PENDING', 'OPEN', 'FILLED', 'PARTIALLY_FILLED', 'CANCELLED', 'FAILED')",
-            name='check_order_status'
-        ),
-        Index('idx_orders_status_time', 'status', 'created_at'),
-        Index('idx_orders_source_whale', 'source_whale'),
-        Index('idx_orders_market', 'market_id'),
+        Index('idx_trade_whale', 'whale_address', 'timestamp'),
+        Index('idx_trade_market', 'market_id', 'timestamp'),
+        Index('idx_trade_timestamp', 'timestamp'),
+        Index('idx_trade_copied', 'was_copied'),
     )
 
     def __repr__(self):
-        return f"<Order(id={self.order_id[:12]}, {self.status}, {self.side} {self.size}@{self.price})>"
+        return f"<Trade(id={self.id}, whale={self.whale_address[:10]}..., side={self.side.value}, amount=${self.amount})>"
 
 
 class Position(Base):
     """
-    Position model - tracks open and closed positions.
-    Enhanced with risk management and stop-loss tracking.
+    Open or closed position from copy trading.
+
+    Tracks our actual positions that resulted from copying whales.
     """
     __tablename__ = 'positions'
 
-    position_id = Column(String(100), primary_key=True)
-    user_address = Column(String(42), nullable=False, index=True)
+    # Identity
+    id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # Market identifiers
-    market_id = Column(String(66), nullable=False, index=True)
-    condition_id = Column(String(66), ForeignKey('markets.condition_id', ondelete='CASCADE'))
-    token_id = Column(String(78), nullable=False)
-    outcome = Column(String(10))
+    # References
+    whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'), nullable=False)
+    market_id = Column(String(66), ForeignKey('markets.id', ondelete='CASCADE'), nullable=False)
+    entry_trade_id = Column(Integer, ForeignKey('trades.id', ondelete='SET NULL'))
+    exit_trade_id = Column(Integer, ForeignKey('trades.id', ondelete='SET NULL'))
 
-    # Position sizing
-    size = Column(Numeric(20, 6), nullable=False)
-    avg_entry_price = Column(Numeric(10, 6), nullable=False)
-    current_price = Column(Numeric(10, 6))
+    # Position details
+    side = Column(Enum(Side), nullable=False)
+    size = Column(Numeric(20, 8), nullable=False)
 
-    # P&L tracking
-    initial_value = Column(Numeric(20, 2), nullable=False)
-    current_value = Column(Numeric(20, 2))
-    unrealized_pnl = Column(Numeric(20, 2))
-    realized_pnl = Column(Numeric(20, 2), default=0)
-    percent_pnl = Column(Numeric(10, 2))
+    # Entry/exit prices
+    entry_price = Column(Numeric(10, 2), nullable=False)
+    exit_price = Column(Numeric(10, 2))
+    current_price = Column(Numeric(10, 2))
 
-    # Fees
-    total_fees_paid = Column(Numeric(20, 2), default=0)
+    # PnL tracking
+    realized_pnl = Column(Numeric(20, 2), default=0.0)
+    unrealized_pnl = Column(Numeric(20, 2), default=0.0)
 
-    # Market info
-    market_title = Column(Text)
-    category = Column(Enum(Sector))
-    end_date = Column(TIMESTAMP)
-    redeemable = Column(Boolean, default=False)
-
-    # Risk management
-    stop_loss_price = Column(Numeric(10, 6))
-    take_profit_price = Column(Numeric(10, 6))
-    max_loss_limit = Column(Numeric(20, 2))  # $ amount
-    risk_score = Column(Numeric(10, 4))  # 0-10 scale
-    days_to_expiry = Column(Integer)
-
-    # Exit rules
-    exit_at_timestamp = Column(TIMESTAMP)  # Pre-resolution exit time
-    exit_reason = Column(String(50))  # stop_loss, take_profit, time_exit, manual, resolution
-
-    # Copy trading metadata
-    source_whale = Column(String(42), ForeignKey('whales.address', ondelete='SET NULL'))
-    entry_trade_id = Column(String(100))
-    entry_order_id = Column(String(100))
-    exit_order_id = Column(String(100))
-
-    # Status
-    status = Column(String(20), default='OPEN')
+    # Position state
+    status = Column(Enum(PositionStatus), default=PositionStatus.OPEN, nullable=False)
 
     # Timestamps
     opened_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
     closed_at = Column(TIMESTAMP)
-    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
 
     # Relationships
-    whale = relationship("Whale", back_populates="positions")
-    market = relationship("Market", back_populates="positions")
+    whale = relationship('Whale', back_populates='positions')
+    market = relationship('Market', back_populates='positions')
 
     __table_args__ = (
-        CheckConstraint("status IN ('OPEN', 'CLOSED', 'LIQUIDATED')", name='check_position_status'),
-        CheckConstraint("outcome IN ('YES', 'NO', NULL)", name='check_position_outcome'),
-        Index('idx_positions_user_status', 'user_address', 'status'),
-        Index('idx_positions_market', 'market_id'),
-        Index('idx_positions_source_whale', 'source_whale'),
-        Index('idx_positions_status', 'status'),
-        Index('idx_positions_pnl', 'percent_pnl'),
+        Index('idx_position_whale', 'whale_address', 'status'),
+        Index('idx_position_market', 'market_id', 'status'),
+        Index('idx_position_status', 'status'),
+        Index('idx_position_opened', 'opened_at'),
     )
 
     def __repr__(self):
-        return f"<Position(id={self.position_id[:12]}, whale={self.source_whale[:8] if self.source_whale else 'N/A'}, pnl={self.unrealized_pnl})>"
+        return f"<Position(id={self.id}, whale={self.whale_address[:10]}..., status={self.status.value}, pnl=${self.realized_pnl})>"
 
 
 # =============================================================================
-# PERFORMANCE & ANALYTICS TABLES
+# ADVANCED TRACKING TABLES
 # =============================================================================
 
-class PerformanceMetric(Base):
+class WalletCluster(Base):
     """
-    Performance metrics - rolling window calculations.
-    Tracks portfolio, whale, and strategy performance over multiple timeframes.
+    Clustered wallets (Sybil detection, whale identification).
+
+    Groups related wallet addresses for:
+    - Identifying the same whale across multiple wallets
+    - Detecting Sybil attacks
+    - Portfolio aggregation
     """
-    __tablename__ = 'performance_metrics'
+    __tablename__ = 'wallet_clusters'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    entity_type = Column(String(20), nullable=False)  # whale, portfolio, strategy
-    entity_id = Column(String(100), nullable=False)
+    cluster_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    cluster_name = Column(String(100))  # Human-readable name
 
-    # Time window
-    window_days = Column(Integer, nullable=False)
-
-    # Trade statistics
-    total_trades = Column(Integer)
-    win_rate = Column(Numeric(5, 2))
-    avg_trade_pnl = Column(Numeric(20, 2))
-    total_pnl = Column(Numeric(20, 2))
-    roi = Column(Numeric(10, 2))
-
-    # Risk-adjusted metrics
-    sharpe_ratio = Column(Numeric(10, 4))
-    sortino_ratio = Column(Numeric(10, 4))
-    calmar_ratio = Column(Numeric(10, 4))
-    information_ratio = Column(Numeric(10, 4))
-
-    # Risk metrics
-    max_drawdown = Column(Numeric(10, 2))
-    max_drawdown_duration_days = Column(Integer)
-    volatility = Column(Numeric(10, 4))
-    downside_deviation = Column(Numeric(10, 4))
-    var_95 = Column(Numeric(20, 2))  # Value at Risk 95%
-    cvar_95 = Column(Numeric(20, 2))  # Conditional VaR
-
-    # Other metrics
-    profit_factor = Column(Numeric(10, 4))
-    k_ratio = Column(Numeric(10, 4))
-    ulcer_index = Column(Numeric(10, 4))
-
-    # Efficiency metrics
-    avg_time_in_trade_hours = Column(Numeric(10, 2))
-    capital_efficiency = Column(Numeric(10, 4))
+    # Clustering confidence
+    confidence_score = Column(Numeric(5, 2), default=0.0)  # 0-100
+    clustering_method = Column(String(50))  # e.g., "behavioral", "on-chain", "manual"
 
     # Metadata
-    calculated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    period_start = Column(TIMESTAMP, nullable=False)
-    period_end = Column(TIMESTAMP, nullable=False)
+    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
 
     __table_args__ = (
-        CheckConstraint("entity_type IN ('whale', 'portfolio', 'strategy')", name='check_entity_type'),
-        Index('idx_perf_entity_time', 'entity_type', 'entity_id', 'calculated_at'),
-        Index('idx_perf_window', 'window_days', 'calculated_at'),
+        Index('idx_cluster_confidence', 'confidence_score'),
     )
 
     def __repr__(self):
-        return f"<PerformanceMetric({self.entity_type}={self.entity_id}, {self.window_days}d, sharpe={self.sharpe_ratio})>"
+        return f"<WalletCluster(id={self.cluster_id}, name={self.cluster_name})>"
 
 
-# =============================================================================
-# RISK & MANIPULATION DETECTION TABLES
-# =============================================================================
-
-class ManipulationFlag(Base):
+class ManipulationEvent(Base):
     """
-    Manipulation detection - flags suspicious whale behavior.
-    Implements real-time firewall against spoofing, wash trading, oracle attacks.
+    Detected manipulation events (wash trading, spoofing, etc.)
     """
-    __tablename__ = 'manipulation_flags'
+    __tablename__ = 'manipulation_events'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'), nullable=False)
-
-    # Flag type
-    flag_type = Column(String(50), nullable=False)  # spoofing, wash_trading, oracle_attack, pump_dump
-    severity = Column(String(20), nullable=False)  # low, medium, high, critical
-
-    # Detection details
-    detection_method = Column(String(100))  # otr_threshold, temporal_correlation, uma_voting
-    confidence_score = Column(Numeric(5, 4), nullable=False)  # 0-1
-
-    # Evidence
-    evidence = Column(JSONB)  # Store detection metrics
-    related_trades = Column(ARRAY(String(100)))
-    related_markets = Column(ARRAY(String(66)))
-
-    # Action taken
-    action = Column(String(50))  # quarantine, blacklist, alert, monitor
-    auto_resolved = Column(Boolean, default=False)
-
-    # Review
-    reviewed = Column(Boolean, default=False)
-    reviewed_by = Column(String(100))
-    reviewed_at = Column(TIMESTAMP)
-    review_notes = Column(Text)
-
-    # Timestamps
-    flagged_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    resolved_at = Column(TIMESTAMP)
-
-    # Relationships
-    whale = relationship("Whale", back_populates="manipulation_flags")
-
-    __table_args__ = (
-        CheckConstraint(
-            "flag_type IN ('spoofing', 'wash_trading', 'oracle_attack', 'pump_dump', 'coordinated')",
-            name='check_flag_type'
-        ),
-        CheckConstraint("severity IN ('low', 'medium', 'high', 'critical')", name='check_severity'),
-        Index('idx_manip_whale_time', 'whale_address', 'flagged_at'),
-        Index('idx_manip_type_severity', 'flag_type', 'severity'),
-        Index('idx_manip_reviewed', 'reviewed', 'flagged_at'),
-    )
-
-    def __repr__(self):
-        return f"<ManipulationFlag(whale={self.whale_address[:8]}, type={self.flag_type}, severity={self.severity})>"
-
-
-class CircuitBreaker(Base):
-    """
-    Circuit breaker log - tracks portfolio-level risk events.
-    Records when trading is halted due to risk limits being breached.
-    """
-    __tablename__ = 'circuit_breakers'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-
-    # Trigger details
-    trigger_type = Column(String(50), nullable=False)  # daily_loss, max_drawdown, volatility_spike
-    trigger_value = Column(Numeric(20, 2))
-    threshold = Column(Numeric(20, 2))
-
-    # Portfolio state at trigger
-    portfolio_value = Column(Numeric(20, 2))
-    portfolio_pnl_pct = Column(Numeric(10, 2))
-    open_positions_count = Column(Integer)
-
-    # Action
-    action = Column(String(50), nullable=False)  # halt_trading, reduce_exposure, close_all
-    duration_minutes = Column(Integer)  # How long halted
-
-    # Resolution
-    resolved = Column(Boolean, default=False)
-    resolved_at = Column(TIMESTAMP)
-    resolved_by = Column(String(100))  # manual, auto
-
-    # Timestamps
-    triggered_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-
-    __table_args__ = (
-        CheckConstraint(
-            "trigger_type IN ('daily_loss', 'max_drawdown', 'volatility_spike', 'manipulation_detected', 'api_failure')",
-            name='check_trigger_type'
-        ),
-        Index('idx_circuit_breaker_time', 'triggered_at'),
-        Index('idx_circuit_breaker_resolved', 'resolved'),
-    )
-
-    def __repr__(self):
-        return f"<CircuitBreaker(trigger={self.trigger_type}, value={self.trigger_value}, resolved={self.resolved})>"
-
-
-# =============================================================================
-# SYSTEM & EVENTS TABLES
-# =============================================================================
-
-class Event(Base):
-    """Event model - system events, alerts, and audit trail"""
-    __tablename__ = 'events'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    event_type = Column(String(50), nullable=False)
-    severity = Column(String(20))
 
     # Event details
-    title = Column(String(200), nullable=False)
-    description = Column(Text)
-    event_metadata = Column(JSONB, default={})
+    event_type = Column(Enum(ManipulationSignal), nullable=False)
+    severity = Column(Numeric(5, 2), nullable=False)  # 0-100
+
+    # Involved entities
+    whale_addresses = Column(ARRAY(String))  # List of involved whales
+    market_id = Column(String(66), ForeignKey('markets.id', ondelete='CASCADE'))
+    trade_ids = Column(ARRAY(Integer))  # Involved trades
+
+    # Detection details
+    detection_method = Column(String(100))
+    evidence = Column(JSONB)  # Store detailed evidence as JSON
+
+    # Response
+    action_taken = Column(String(50))  # e.g., "alert", "disable_whale", "ignore"
+    resolved = Column(Boolean, default=False)
+
+    # Timestamps
+    detected_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    resolved_at = Column(TIMESTAMP)
+
+    __table_args__ = (
+        Index('idx_manipulation_type', 'event_type'),
+        Index('idx_manipulation_severity', 'severity'),
+        Index('idx_manipulation_resolved', 'resolved', 'detected_at'),
+    )
+
+    def __repr__(self):
+        return f"<ManipulationEvent(id={self.id}, type={self.event_type.value}, severity={self.severity})>"
+
+
+class PortfolioSnapshot(Base):
+    """
+    Daily portfolio snapshots for performance tracking.
+    """
+    __tablename__ = 'portfolio_snapshots'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Portfolio metrics
+    total_value = Column(Numeric(20, 2), nullable=False)
+    cash_balance = Column(Numeric(20, 2), nullable=False)
+    position_value = Column(Numeric(20, 2), nullable=False)
+
+    # Performance
+    daily_pnl = Column(Numeric(20, 2), default=0.0)
+    total_pnl = Column(Numeric(20, 2), default=0.0)
+    daily_return = Column(Numeric(10, 4), default=0.0)
+
+    # Risk metrics
+    var_95 = Column(Numeric(20, 2))  # Value at Risk (95%)
+    sharpe_ratio = Column(Numeric(10, 4))
+    max_drawdown = Column(Numeric(10, 4))
+
+    # Position breakdown
+    open_positions_count = Column(Integer, default=0)
+    positions_by_sector = Column(JSONB)  # {sector: count}
+
+    # Timestamp
+    snapshot_date = Column(TIMESTAMP, nullable=False, unique=True)
+
+    __table_args__ = (
+        Index('idx_snapshot_date', 'snapshot_date'),
+    )
+
+    def __repr__(self):
+        return f"<PortfolioSnapshot(date={self.snapshot_date}, value=${self.total_value}, pnl=${self.daily_pnl})>"
+
+
+class StrategyPerformance(Base):
+    """
+    Performance tracking for different copying strategies.
+
+    Allows A/B testing of whale selection and position sizing strategies.
+    """
+    __tablename__ = 'strategy_performance'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Strategy identification
+    strategy_name = Column(String(100), nullable=False)
+    strategy_params = Column(JSONB)  # Store strategy config as JSON
+
+    # Performance metrics
+    total_trades = Column(Integer, default=0)
+    winning_trades = Column(Integer, default=0)
+    losing_trades = Column(Integer, default=0)
+    win_rate = Column(Numeric(5, 2), default=0.0)
+
+    # Returns
+    total_pnl = Column(Numeric(20, 2), default=0.0)
+    total_return = Column(Numeric(10, 4), default=0.0)  # Percentage
+    sharpe_ratio = Column(Numeric(10, 4), default=0.0)
+    max_drawdown = Column(Numeric(10, 4), default=0.0)
+
+    # Risk metrics
+    avg_position_size = Column(Numeric(20, 2))
+    max_position_size = Column(Numeric(20, 2))
+    avg_holding_period_hours = Column(Numeric(10, 2))
+
+    # Status
+    is_active = Column(Boolean, default=True)
+
+    # Timestamps
+    strategy_start = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    last_updated = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
+
+    __table_args__ = (
+        Index('idx_strategy_name', 'strategy_name'),
+        Index('idx_strategy_active', 'is_active'),
+        Index('idx_strategy_sharpe', 'sharpe_ratio'),
+    )
+
+    def __repr__(self):
+        return f"<StrategyPerformance(name={self.strategy_name}, sharpe={self.sharpe_ratio}, win_rate={self.win_rate}%)>"
+
+
+class Alert(Base):
+    """
+    System alerts (whale edge decay, manipulation, risk breaches, etc.)
+    """
+    __tablename__ = 'alerts'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+
+    # Alert details
+    alert_type = Column(String(50), nullable=False)  # e.g., "edge_decay", "manipulation", "risk_breach"
+    severity = Column(String(20), nullable=False)  # "low", "medium", "high", "critical"
+    message = Column(Text, nullable=False)
 
     # Related entities
     whale_address = Column(String(42), ForeignKey('whales.address', ondelete='CASCADE'))
-    order_id = Column(String(100))
-    position_id = Column(String(100))
-    trade_id = Column(String(100))
+    market_id = Column(String(66), ForeignKey('markets.id', ondelete='CASCADE'))
 
-    # Alert/notification
-    alerted = Column(Boolean, default=False)
-    alert_channel = Column(String(50))  # slack, pagerduty, email
+    # Alert data
+    details = Column(JSONB)  # Additional context as JSON
 
-    # Resolution
+    # Status
+    acknowledged = Column(Boolean, default=False)
     resolved = Column(Boolean, default=False)
-    resolved_at = Column(TIMESTAMP)
-    resolved_by = Column(String(100))
 
     # Timestamps
-    timestamp = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
     created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
+    acknowledged_at = Column(TIMESTAMP)
+    resolved_at = Column(TIMESTAMP)
 
     __table_args__ = (
-        CheckConstraint("severity IN ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')", name='check_severity'),
-        Index('idx_events_type_time', 'event_type', 'timestamp'),
-        Index('idx_events_severity_time', 'severity', 'timestamp'),
-        Index('idx_events_whale_time', 'whale_address', 'timestamp'),
+        Index('idx_alert_type', 'alert_type'),
+        Index('idx_alert_severity', 'severity'),
+        Index('idx_alert_unresolved', 'resolved', 'created_at'),
     )
 
     def __repr__(self):
-        return f"<Event(type={self.event_type}, severity={self.severity}, title={self.title[:30]})>"
-
-
-class SystemState(Base):
-    """System state model - tracks system status and configuration"""
-    __tablename__ = 'system_state'
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    key = Column(String(100), unique=True, nullable=False)
-    value = Column(Text)
-    value_type = Column(String(20))
-
-    description = Column(Text)
-
-    created_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-    updated_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'))
-
-    __table_args__ = (
-        CheckConstraint("value_type IN ('string', 'number', 'boolean', 'json')", name='check_value_type'),
-        Index('idx_system_state_key', 'key'),
-    )
-
-    def __repr__(self):
-        return f"<SystemState(key={self.key}, value={self.value})>"
+        return f"<Alert(id={self.id}, type={self.alert_type}, severity={self.severity})>"
 
 
 # =============================================================================
-# AUTO-OPTIMIZATION TABLES
+# OPTIMIZATION & AUTO-TUNING TABLES
 # =============================================================================
 
 class OptimizationRun(Base):
     """
-    Optimization run - tracks Safe Bayesian Optimization experiments.
-    Records parameter tuning history for continuous improvement.
+    Bayesian optimization runs for strategy parameter tuning.
+
+    Tracks hyperparameter optimization experiments for:
+    - Whale selection criteria
+    - Position sizing
+    - Entry/exit timing
     """
     __tablename__ = 'optimization_runs'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
 
-    # Optimization config
-    algorithm = Column(String(50), nullable=False)  # SafeOpt, HCOPE, Bandits
-    objective = Column(String(50), nullable=False)  # sharpe, roi, drawdown
+    # Optimization setup
+    strategy_name = Column(String(100), nullable=False)
+    optimization_algorithm = Column(String(50), nullable=False)  # e.g., "bayesian", "grid_search"
+    search_space = Column(JSONB)  # Parameter ranges
 
-    # Parameters tested
-    parameters = Column(JSONB, nullable=False)  # {param_name: value, ...}
+    # Tested parameters
+    parameters = Column(JSONB, nullable=False)  # Actual tested values
 
     # Results
     objective_value = Column(Numeric(15, 6))
@@ -875,3 +556,37 @@ class OptimizationRun(Base):
 
     def __repr__(self):
         return f"<OptimizationRun(id={self.id}, obj={self.objective_value}, deployed={self.deployed})>"
+
+
+# =============================================================================
+# TRADING CONFIG TABLE
+# =============================================================================
+
+class TradingConfig(Base):
+    """
+    System-wide trading configuration with kill switch support.
+
+    Single-row table that stores trading system state.
+    """
+    __tablename__ = 'trading_config'
+
+    id = Column(Integer, primary_key=True, default=1)  # Always 1, enforced by application
+
+    # Kill switch
+    copy_trading_enabled = Column(Boolean, default=True, nullable=False)
+
+    # Trading parameters
+    max_position_size = Column(Numeric(20, 2), default=1000.0)
+    max_total_exposure = Column(Numeric(20, 2), default=10000.0)
+    max_positions = Column(Integer, default=1000)
+
+    # Metadata
+    last_modified_at = Column(TIMESTAMP, nullable=False, server_default=text('NOW()'), onupdate=text('NOW()'))
+    modified_by = Column(String(100))  # User/system that made the change
+
+    __table_args__ = (
+        CheckConstraint('id = 1', name='single_row_only'),  # Enforce single row
+    )
+
+    def __repr__(self):
+        return f"<TradingConfig(enabled={self.copy_trading_enabled}, modified={self.last_modified_at})>"
