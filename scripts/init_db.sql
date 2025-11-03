@@ -393,6 +393,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Trading configuration table - kill switch and runtime config
+CREATE TABLE IF NOT EXISTS trading_config (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(100) UNIQUE NOT NULL,
+    value TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+-- Insert default trading config values
+INSERT INTO trading_config (key, value, description) VALUES
+    ('trading_enabled', 'true', 'Master kill switch for all copy trading')
+ON CONFLICT (key) DO NOTHING;
+
+-- Apply update timestamp trigger
+CREATE TRIGGER update_trading_config_updated_at BEFORE UPDATE ON trading_config
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- Grant permissions
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO trader;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO trader;
