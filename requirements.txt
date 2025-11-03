@@ -6,7 +6,7 @@
 # Polymarket API & Blockchain
 py-clob-client==0.20.0          # Updated to latest version
 web3==6.11.0
-eth-account==0.10.0
+eth-account>=0.13.0             # Updated for py-clob-client compatibility
 eth-keys==0.4.0
 
 # Web Framework & API (NEW - CRITICAL FOR PRODUCTION)
