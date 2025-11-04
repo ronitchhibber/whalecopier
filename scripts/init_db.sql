@@ -395,18 +395,40 @@ $$ LANGUAGE plpgsql;
 
 -- Trading configuration table - kill switch and runtime config
 CREATE TABLE IF NOT EXISTS trading_config (
-    id SERIAL PRIMARY KEY,
-    key VARCHAR(100) UNIQUE NOT NULL,
-    value TEXT NOT NULL,
-    description TEXT,
+    id INTEGER PRIMARY KEY DEFAULT 1,
+
+    -- Kill switch
+    copy_trading_enabled BOOLEAN NOT NULL DEFAULT TRUE,
+
+    -- Trading parameters
+    max_position_size NUMERIC(20, 2) DEFAULT 1000.0,
+    max_total_exposure NUMERIC(20, 2) DEFAULT 10000.0,
+    max_positions INTEGER DEFAULT 1000,
+
+    -- Metadata
+    last_modified_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    modified_by VARCHAR(100),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
--- Insert default trading config values
-INSERT INTO trading_config (key, value, description) VALUES
-    ('trading_enabled', 'true', 'Master kill switch for all copy trading')
-ON CONFLICT (key) DO NOTHING;
+-- Insert default trading config values (id=1, single row)
+INSERT INTO trading_config (
+    id,
+    copy_trading_enabled,
+    max_position_size,
+    max_total_exposure,
+    max_positions,
+    modified_by
+) VALUES (
+    1,
+    TRUE,
+    1000.0,
+    10000.0,
+    1000,
+    'system'
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Apply update timestamp trigger
 CREATE TRIGGER update_trading_config_updated_at BEFORE UPDATE ON trading_config
